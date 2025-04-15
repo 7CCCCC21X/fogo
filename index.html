@@ -50,6 +50,31 @@
     .leaderboard-section {
       display: none;
     }
+    /* 统计区域样式 */
+    #statsSection {
+      margin-top: 30px;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    #statsSection table {
+      width: auto;
+      border-collapse: collapse;
+      margin: 0 auto;
+    }
+    #statsSection th, #statsSection td {
+      border: 1px solid #ccc;
+      padding: 6px 12px;
+      text-align: center;
+    }
+    #statsSection th {
+      background-color: #eee;
+    }
+    /* 单独的作者链接展示 */
+    #authorLink {
+      margin-top: 20px;
+      font-size: 15px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -63,7 +88,7 @@
     <button data-target="xcomSection" class="tab-btn">X.COM</button>
   </div>
 
-  <!-- 批量查询/过滤输入框（只针对当前显示的排行榜） -->
+  <!-- 批量查询/过滤输入框（仅针对当前显示的排行榜） -->
   <div class="search-box">
     <input type="text" id="queryInput" placeholder="请输入地址或关键词查询..." style="width:300px; padding:8px;">
     <button onclick="filterCurrentTable()">查询</button>
@@ -129,15 +154,23 @@
     </table>
   </section>
 
-  <!-- 总体汇总显示四个排行榜的总分 -->
-  <div id="overallSummary" style="margin-top: 30px; font-weight: bold; font-size: 16px;"></div>
+  <!-- 数据统计区域 -->
+  <h2>数据统计</h2>
+  <div id="statsSection"></div>
+
+  <!-- 单独的作者链接展示 -->
+  <div id="authorLink">
+    作者：<a href="https://x.com/0xXIAOc" target="_blank">小C</a>
+  </div>
 
   <script>
-    // 正则匹配每一行格式，例如：
-    // "排名: 1, 地址: 0x9ed15383940cc380faef0a75edace507cc775f22, 分数: 42000"
+    /**
+     * 数据行格式示例：
+     * 排名: 1, 地址: 0x9ed15383940cc380faef0a75edace507cc775f22, 分数: 42000
+     */
     const lineRegex = /排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
 
-    // 加载并解析单个排行榜文件，并在表格底部添加总结行（总分、平均分）
+    // 加载并解析单个排行榜数据，提取排名、地址、分数
     async function loadLeaderboard(filePath, tableId) {
       try {
         const response = await fetch(filePath);
@@ -147,12 +180,7 @@
         const text = await response.text();
         const lines = text.trim().split('\n');
         const tbody = document.getElementById(tableId).querySelector('tbody');
-
-        // 清空原有数据，若有
-        tbody.innerHTML = '';
-        
-        // 数组存储各个分数，便于计算总分与平均分
-        const scores = [];
+        tbody.innerHTML = ''; // 清空原有数据
 
         lines.forEach(line => {
           const match = line.match(lineRegex);
@@ -160,33 +188,32 @@
             const rank = match[1];
             const address = match[2];
             const score = parseFloat(match[3]);
-            scores.push(score);
 
             const tr = document.createElement('tr');
 
-            // 添加排名列
+            // 排名
             const tdRank = document.createElement('td');
             tdRank.textContent = rank;
             tr.appendChild(tdRank);
 
-            // 添加地址列，并根据所属排行榜创建超链接
+            // 地址（添加超链接）
             const tdAddress = document.createElement('td');
-            const link = document.createElement('a');
-            link.textContent = address;
-            link.target = "_blank";
+            const addressLink = document.createElement('a');
+            addressLink.textContent = address;
+            addressLink.target = "_blank";
             if (tableId === 'tradingTable') {
-              link.href = 'https://debank.com/profile/' + address;
+              addressLink.href = 'https://debank.com/profile/' + address;
             } else if (tableId === 'stakingTable') {
-              link.href = 'https://app.getnimbus.io/?tab=token&type=SOL&chain=ALL&address=' + address;
+              addressLink.href = 'https://app.getnimbus.io/?tab=token&type=SOL&chain=ALL&address=' + address;
             } else if (tableId === 'xcomTable') {
-              link.href = 'https://x.com/' + address;
+              addressLink.href = 'https://x.com/' + address;
             } else {
-              link.href = '#';
+              addressLink.href = '#';
             }
-            tdAddress.appendChild(link);
+            tdAddress.appendChild(addressLink);
             tr.appendChild(tdAddress);
 
-            // 添加分数列
+            // 分数
             const tdScore = document.createElement('td');
             tdScore.textContent = score;
             tr.appendChild(tdScore);
@@ -195,22 +222,8 @@
           }
         });
 
-        // 计算该排行榜的总分和平均分
-        let totalScore = scores.reduce((a, b) => a + b, 0);
-        let avgScore = scores.length > 0 ? (totalScore / scores.length).toFixed(2) : 0;
-
-        // 添加总结行，设置 class 为 'summary' 以便过滤时不隐藏
-        const summaryTr = document.createElement('tr');
-        summaryTr.classList.add('summary');
-        summaryTr.style.fontWeight = "bold";
-        const tdSummary = document.createElement('td');
-        tdSummary.colSpan = 3;
-        tdSummary.textContent = `总分: ${totalScore}, 平均分: ${avgScore}`;
-        summaryTr.appendChild(tdSummary);
-        tbody.appendChild(summaryTr);
-
-        // 每次加载后重新计算总体汇总
-        computeOverallSummary();
+        // 加载数据后更新统计数据
+        updateStats();
       } catch (error) {
         console.error('Error loading leaderboard:', error);
       }
@@ -226,45 +239,31 @@
     const tabButtons = document.querySelectorAll('.tab-btn');
     tabButtons.forEach(btn => {
       btn.addEventListener('click', function() {
-        // 清除所有按钮 active 样式
         tabButtons.forEach(b => b.classList.remove('active'));
         this.classList.add('active');
-
-        // 隐藏所有排行榜 section
         const sections = document.querySelectorAll('.leaderboard-section');
         sections.forEach(section => section.style.display = 'none');
-
-        // 显示对应排行榜
         const targetId = this.getAttribute('data-target');
         document.getElementById(targetId).style.display = 'block';
-
-        // 清空搜索输入框并重置过滤状态
         document.getElementById('queryInput').value = '';
         resetTable(targetId);
       });
     });
 
-    // 页面加载时默认显示第一个选项卡
+    // 默认显示第一个排行榜
     document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('tradingSection').style.display = 'block';
     });
 
-    // 批量查询：仅对当前显示的排行榜进行搜索过滤
+    // 批量查询：仅过滤当前显示排行榜数据
     function filterCurrentTable() {
       const query = document.getElementById('queryInput').value.trim().toLowerCase();
-      // 获取当前显示的 section（排行榜）
       const currentSection = Array.from(document.querySelectorAll('.leaderboard-section'))
-                            .find(section => section.style.display !== 'none');
+                                 .find(section => section.style.display !== 'none');
       if (!currentSection) return;
-
       const tbody = currentSection.querySelector('table tbody');
       let matchedCount = 0;
       Array.from(tbody.rows).forEach(row => {
-        // 不对 summary 行进行过滤（保持始终显示）
-        if (row.classList.contains('summary')) {
-          row.style.display = '';
-          return;
-        }
         const text = row.textContent.toLowerCase();
         if (text.includes(query)) {
           row.style.display = '';
@@ -273,15 +272,13 @@
           row.style.display = 'none';
         }
       });
-
-      // 如果没有匹配则显示“无”提示行（但不影响 summary 行）
       let noDataRow = tbody.querySelector('.no-data');
       if (matchedCount === 0) {
         if (!noDataRow) {
           noDataRow = document.createElement('tr');
           noDataRow.className = 'no-data';
           const td = document.createElement('td');
-          td.colSpan = tbody.parentNode.querySelector('thead tr').childElementCount;
+          td.colSpan = 3; // 3列：排名、地址、分数
           td.textContent = '无';
           noDataRow.appendChild(td);
           tbody.appendChild(noDataRow);
@@ -293,35 +290,54 @@
       }
     }
 
-    // 重置当前表格所有行的显示状态（用于切换选项卡时清除过滤效果）
+    // 重置当前表格过滤状态（切换选项卡时清除搜索结果）
     function resetTable(sectionId) {
       const tbody = document.getElementById(sectionId).querySelector('table tbody');
-      Array.from(tbody.rows).forEach(row => {
-        row.style.display = '';
-      });
+      Array.from(tbody.rows).forEach(row => row.style.display = '');
       const noDataRow = tbody.querySelector('.no-data');
-      if (noDataRow) {
-        noDataRow.remove();
-      }
+      if (noDataRow) { noDataRow.remove(); }
     }
 
-    // 计算四个排行榜的总体总分并显示在页面底部
-    function computeOverallSummary() {
-      let overallTotal = 0;
-      const tableIds = ['tradingTable', 'stakingTable', 'discordTable', 'xcomTable'];
-      tableIds.forEach(tableId => {
-        const table = document.getElementById(tableId);
-        const summaryRow = table.querySelector('tbody tr.summary');
-        if (summaryRow) {
-          const text = summaryRow.textContent;
-          const totalMatch = text.match(/总分:\s*(\d+)/);
-          if (totalMatch) {
-            overallTotal += parseInt(totalMatch[1]);
-          }
-        }
+    // 更新统计数据：统计每个排行榜的用户数量与总分，然后渲染到 #statsSection 中
+    function updateStats() {
+      const tableIds = [
+        { id: 'tradingTable', name: 'TRADING' },
+        { id: 'stakingTable', name: 'STAKING' },
+        { id: 'discordTable', name: 'DISCORD' },
+        { id: 'xcomTable', name: 'X.COM' }
+      ];
+      let statsHTML = '<table><thead><tr><th>排行榜</th><th>用户数量</th><th>总分</th></tr></thead><tbody>';
+      let overallUserCount = 0;
+      let overallTotalScore = 0;
+
+      tableIds.forEach(item => {
+        const table = document.getElementById(item.id);
+        const rows = Array.from(table.querySelector('tbody').rows);
+        let userCount = 0;
+        let totalScore = 0;
+        rows.forEach(row => {
+          if (row.classList.contains('no-data')) return;
+          // 第三列为分数（索引为2）
+          const scoreText = row.cells[2]?.textContent || '0';
+          const scoreVal = parseFloat(scoreText);
+          totalScore += (isNaN(scoreVal) ? 0 : scoreVal);
+          userCount++;
+        });
+        statsHTML += `<tr>
+                        <td>${item.name}</td>
+                        <td>${userCount}</td>
+                        <td>${totalScore}</td>
+                      </tr>`;
+        overallUserCount += userCount;
+        overallTotalScore += totalScore;
       });
-      const overallDiv = document.getElementById('overallSummary');
-      overallDiv.textContent = `四个排行榜的总分: ${overallTotal}`;
+      statsHTML += `<tr style="font-weight:bold;">
+                      <td>总计</td>
+                      <td>${overallUserCount}</td>
+                      <td>${overallTotalScore}</td>
+                    </tr>`;
+      statsHTML += '</tbody></table>';
+      document.getElementById('statsSection').innerHTML = statsHTML;
     }
   </script>
 </body>
