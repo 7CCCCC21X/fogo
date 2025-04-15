@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>排行榜</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #f5f5f5;
+    }
+    .search-box {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>排行榜汇总</h1>
+
+  <!-- 批量查询/过滤输入框 -->
+  <div class="search-box">
+    <input type="text" id="queryInput" placeholder="请输入关键词查询..." style="width:300px; padding:8px;">
+    <button onclick="filterTables()">查询</button>
+  </div>
+
+  <!-- TRADING排行榜 -->
+  <section>
+    <h2>TRADING</h2>
+    <table id="tradingTable">
+      <thead>
+        <tr>
+          <th>排名</th>
+          <th>名称</th>
+          <th>数值</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- STAKING排行榜 -->
+  <section>
+    <h2>STAKING</h2>
+    <table id="stakingTable">
+      <thead>
+        <tr>
+          <th>排名</th>
+          <th>名称</th>
+          <th>数值</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- DISCORD排行榜 -->
+  <section>
+    <h2>DISCORD</h2>
+    <table id="discordTable">
+      <thead>
+        <tr>
+          <th>排名</th>
+          <th>名称</th>
+          <th>数值</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- X.COM排行榜 -->
+  <section>
+    <h2>X.COM</h2>
+    <table id="xcomTable">
+      <thead>
+        <tr>
+          <th>排名</th>
+          <th>名称</th>
+          <th>数值</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <script>
+    // 利用 Fetch API 加载 TXT 文件并解析数据，假设数据格式为“排名,名称,数值”
+    async function loadLeaderboard(filePath, tableId) {
+      try {
+        const response = await fetch(filePath);
+        if (!response.ok) {
+          throw new Error('无法加载 ' + filePath);
+        }
+        const text = await response.text();
+        const rows = text.trim().split('\n');
+        const tbody = document.getElementById(tableId).querySelector('tbody');
+
+        rows.forEach(line => {
+          const parts = line.split(','); // 根据实际分隔符调整
+          if (parts.length >= 3) {
+            const tr = document.createElement('tr');
+            parts.forEach(part => {
+              const td = document.createElement('td');
+              td.textContent = part.trim();
+              tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+          }
+        });
+      } catch (error) {
+        console.error('Error loading leaderboard:', error);
+      }
+    }
+
+    // 加载所有排行榜数据
+    loadLeaderboard('data/trading.txt', 'tradingTable');
+    loadLeaderboard('data/staking.txt', 'stakingTable');
+    loadLeaderboard('data/discord.txt', 'discordTable');
+    loadLeaderboard('data/xcom.txt', 'xcomTable');
+
+    // 批量查询功能：根据输入关键词过滤所有表格中包含该关键词的行
+    function filterTables() {
+      const query = document.getElementById('queryInput').value.trim().toLowerCase();
+      
+      // 获取所有表格的 tbody 元素
+      const tbodies = document.querySelectorAll('table tbody');
+      tbodies.forEach(tbody => {
+        // 遍历每一行
+        Array.from(tbody.rows).forEach(row => {
+          let text = row.textContent.toLowerCase();
+          // 如果包含关键词则显示，否则隐藏
+          if (text.includes(query)) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html>
