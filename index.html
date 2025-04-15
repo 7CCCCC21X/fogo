@@ -129,12 +129,15 @@
     </table>
   </section>
 
+  <!-- 总体汇总显示四个排行榜的总分 -->
+  <div id="overallSummary" style="margin-top: 30px; font-weight: bold; font-size: 16px;"></div>
+
   <script>
-    // 正则匹配每一行格式：例如
+    // 正则匹配每一行格式，例如：
     // "排名: 1, 地址: 0x9ed15383940cc380faef0a75edace507cc775f22, 分数: 42000"
     const lineRegex = /排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
 
-    // 加载并解析单个排行榜文件
+    // 加载并解析单个排行榜文件，并在表格底部添加总结行（总分、平均分）
     async function loadLeaderboard(filePath, tableId) {
       try {
         const response = await fetch(filePath);
@@ -145,12 +148,19 @@
         const lines = text.trim().split('\n');
         const tbody = document.getElementById(tableId).querySelector('tbody');
 
+        // 清空原有数据，若有
+        tbody.innerHTML = '';
+        
+        // 数组存储各个分数，便于计算总分与平均分
+        const scores = [];
+
         lines.forEach(line => {
           const match = line.match(lineRegex);
           if (match) {
             const rank = match[1];
             const address = match[2];
-            const score = match[3];
+            const score = parseFloat(match[3]);
+            scores.push(score);
 
             const tr = document.createElement('tr');
 
@@ -159,7 +169,7 @@
             tdRank.textContent = rank;
             tr.appendChild(tdRank);
 
-            // 添加地址列，并根据所属排行榜创建链接
+            // 添加地址列，并根据所属排行榜创建超链接
             const tdAddress = document.createElement('td');
             const link = document.createElement('a');
             link.textContent = address;
@@ -184,6 +194,23 @@
             tbody.appendChild(tr);
           }
         });
+
+        // 计算该排行榜的总分和平均分
+        let totalScore = scores.reduce((a, b) => a + b, 0);
+        let avgScore = scores.length > 0 ? (totalScore / scores.length).toFixed(2) : 0;
+
+        // 添加总结行，设置 class 为 'summary' 以便过滤时不隐藏
+        const summaryTr = document.createElement('tr');
+        summaryTr.classList.add('summary');
+        summaryTr.style.fontWeight = "bold";
+        const tdSummary = document.createElement('td');
+        tdSummary.colSpan = 3;
+        tdSummary.textContent = `总分: ${totalScore}, 平均分: ${avgScore}`;
+        summaryTr.appendChild(tdSummary);
+        tbody.appendChild(summaryTr);
+
+        // 每次加载后重新计算总体汇总
+        computeOverallSummary();
       } catch (error) {
         console.error('Error loading leaderboard:', error);
       }
@@ -233,6 +260,11 @@
       const tbody = currentSection.querySelector('table tbody');
       let matchedCount = 0;
       Array.from(tbody.rows).forEach(row => {
+        // 不对 summary 行进行过滤（保持始终显示）
+        if (row.classList.contains('summary')) {
+          row.style.display = '';
+          return;
+        }
         const text = row.textContent.toLowerCase();
         if (text.includes(query)) {
           row.style.display = '';
@@ -242,7 +274,7 @@
         }
       });
 
-      // 如果没有匹配则显示“无”提示行
+      // 如果没有匹配则显示“无”提示行（但不影响 summary 行）
       let noDataRow = tbody.querySelector('.no-data');
       if (matchedCount === 0) {
         if (!noDataRow) {
@@ -261,7 +293,7 @@
       }
     }
 
-    // 重置当前表格所有行显示状态（用于切换选项卡时清除过滤效果）
+    // 重置当前表格所有行的显示状态（用于切换选项卡时清除过滤效果）
     function resetTable(sectionId) {
       const tbody = document.getElementById(sectionId).querySelector('table tbody');
       Array.from(tbody.rows).forEach(row => {
@@ -271,6 +303,25 @@
       if (noDataRow) {
         noDataRow.remove();
       }
+    }
+
+    // 计算四个排行榜的总体总分并显示在页面底部
+    function computeOverallSummary() {
+      let overallTotal = 0;
+      const tableIds = ['tradingTable', 'stakingTable', 'discordTable', 'xcomTable'];
+      tableIds.forEach(tableId => {
+        const table = document.getElementById(tableId);
+        const summaryRow = table.querySelector('tbody tr.summary');
+        if (summaryRow) {
+          const text = summaryRow.textContent;
+          const totalMatch = text.match(/总分:\s*(\d+)/);
+          if (totalMatch) {
+            overallTotal += parseInt(totalMatch[1]);
+          }
+        }
+      });
+      const overallDiv = document.getElementById('overallSummary');
+      overallDiv.textContent = `四个排行榜的总分: ${overallTotal}`;
     }
   </script>
 </body>
