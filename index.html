@@ -11,6 +11,24 @@
     h1, h2 {
       color: #333;
     }
+    .tab-nav {
+      margin-bottom: 20px;
+    }
+    .tab-nav button {
+      padding: 10px 20px;
+      margin-right: 10px;
+      border: none;
+      background-color: #f5f5f5;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .tab-nav button.active {
+      background-color: #0066cc;
+      color: white;
+    }
+    .search-box {
+      margin-bottom: 20px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -24,45 +42,35 @@
     th {
       background-color: #f5f5f5;
     }
-    .search-box {
-      margin-bottom: 20px;
-    }
-    nav {
-      margin: 10px 0;
-    }
-    nav a {
-      margin-right: 15px;
-      text-decoration: none;
-      color: #0066cc;
-    }
-    nav a:hover {
-      text-decoration: underline;
-    }
     .no-data td {
       color: #999;
       font-style: italic;
+    }
+    /* 默认隐藏所有排行榜 */
+    .leaderboard-section {
+      display: none;
     }
   </style>
 </head>
 <body>
   <h1>排行榜汇总</h1>
 
-  <!-- 导航链接，可点击跳转到指定排行榜 -->
-  <nav>
-    <a href="#tradingSection">TRADING</a>
-    <a href="#stakingSection">STAKING</a>
-    <a href="#discordSection">DISCORD</a>
-    <a href="#xcomSection">X.COM</a>
-  </nav>
+  <!-- 选项卡导航 -->
+  <div class="tab-nav">
+    <button data-target="tradingSection" class="tab-btn active">TRADING</button>
+    <button data-target="stakingSection" class="tab-btn">STAKING</button>
+    <button data-target="discordSection" class="tab-btn">DISCORD</button>
+    <button data-target="xcomSection" class="tab-btn">X.COM</button>
+  </div>
 
-  <!-- 批量查询/过滤输入框 -->
+  <!-- 批量查询/过滤输入框（只针对当前显示的排行榜） -->
   <div class="search-box">
-    <input type="text" id="queryInput" placeholder="请输入关键词查询，如地址..." style="width:300px; padding:8px;">
-    <button onclick="filterTables()">查询</button>
+    <input type="text" id="queryInput" placeholder="请输入地址或关键词查询..." style="width:300px; padding:8px;">
+    <button onclick="filterCurrentTable()">查询</button>
   </div>
 
   <!-- TRADING排行榜 -->
-  <section id="tradingSection">
+  <section id="tradingSection" class="leaderboard-section">
     <h2>TRADING</h2>
     <table id="tradingTable">
       <thead>
@@ -77,7 +85,7 @@
   </section>
 
   <!-- STAKING排行榜 -->
-  <section id="stakingSection">
+  <section id="stakingSection" class="leaderboard-section">
     <h2>STAKING</h2>
     <table id="stakingTable">
       <thead>
@@ -92,7 +100,7 @@
   </section>
 
   <!-- DISCORD排行榜 -->
-  <section id="discordSection">
+  <section id="discordSection" class="leaderboard-section">
     <h2>DISCORD</h2>
     <table id="discordTable">
       <thead>
@@ -107,7 +115,7 @@
   </section>
 
   <!-- X.COM排行榜 -->
-  <section id="xcomSection">
+  <section id="xcomSection" class="leaderboard-section">
     <h2>X.COM</h2>
     <table id="xcomTable">
       <thead>
@@ -122,7 +130,8 @@
   </section>
 
   <script>
-    // 正则匹配行: "排名: 1, 地址: 0x123..., 分数: 10000"
+    // 正则匹配每一行格式：例如
+    // "排名: 1, 地址: 0x9ed15383940cc380faef0a75edace507cc775f22, 分数: 42000"
     const lineRegex = /排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
 
     // 加载并解析单个排行榜文件
@@ -137,27 +146,22 @@
         const tbody = document.getElementById(tableId).querySelector('tbody');
 
         lines.forEach(line => {
-          // 使用正则解析一行数据
           const match = line.match(lineRegex);
           if (match) {
             const rank = match[1];
             const address = match[2];
             const score = match[3];
 
-            // 创建表格行并填充
             const tr = document.createElement('tr');
 
-            // "排名"
             let tdRank = document.createElement('td');
             tdRank.textContent = rank;
             tr.appendChild(tdRank);
 
-            // "地址"
             let tdAddress = document.createElement('td');
             tdAddress.textContent = address;
             tr.appendChild(tdAddress);
 
-            // "分数"
             let tdScore = document.createElement('td');
             tdScore.textContent = score;
             tr.appendChild(tdScore);
@@ -176,48 +180,83 @@
     loadLeaderboard('data/discord.txt', 'discordTable');
     loadLeaderboard('data/xcom.txt', 'xcomTable');
 
-    // 批量查询：根据输入关键词，显示匹配的行，不匹配的行隐藏；
-    // 若某个表格完全无匹配，则显示“无”
-    function filterTables() {
+    // 选项卡切换功能
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', function() {
+        // 清除所有按钮 active 样式
+        tabButtons.forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+
+        // 隐藏所有排行榜 section
+        const sections = document.querySelectorAll('.leaderboard-section');
+        sections.forEach(section => section.style.display = 'none');
+
+        // 显示点击对应的排行榜
+        const targetId = this.getAttribute('data-target');
+        document.getElementById(targetId).style.display = 'block';
+
+        // 清空搜索输入并重置过滤状态
+        document.getElementById('queryInput').value = '';
+        resetTable(targetId);
+      });
+    });
+
+    // 页面加载时默认显示第一个选项卡
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('tradingSection').style.display = 'block';
+    });
+
+    // 批量查询：仅对当前显示的排行榜进行搜索过滤
+    function filterCurrentTable() {
       const query = document.getElementById('queryInput').value.trim().toLowerCase();
-      const tbodies = document.querySelectorAll('table tbody');
-
-      tbodies.forEach(tbody => {
-        let matchedCount = 0;
-        const rows = Array.from(tbody.rows);
-
-        // 先对所有行做过滤
-        rows.forEach(row => {
-          const text = row.textContent.toLowerCase();
-          if (text.includes(query)) {
-            row.style.display = '';
-            matchedCount++;
-          } else {
-            row.style.display = 'none';
-          }
-        });
-
-        // 若所有行都不匹配，则添加“无”提示行
-        let noDataRow = tbody.querySelector('.no-data');
-        if (matchedCount === 0) {
-          // 如果没有找到“无”提示行，则创建
-          if (!noDataRow) {
-            noDataRow = document.createElement('tr');
-            noDataRow.className = 'no-data';
-            const td = document.createElement('td');
-            // 跨越表头的列数
-            td.colSpan = tbody.parentNode.querySelector('thead tr').childElementCount;
-            td.textContent = '无';
-            noDataRow.appendChild(td);
-            tbody.appendChild(noDataRow);
-          }
+      // 获取当前显示的 section（排行榜）
+      const currentSection = Array.from(document.querySelectorAll('.leaderboard-section'))
+                            .find(section => section.style.display !== 'none');
+      if (!currentSection) return;
+      
+      const tbody = currentSection.querySelector('table tbody');
+      let matchedCount = 0;
+      Array.from(tbody.rows).forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(query)) {
+          row.style.display = '';
+          matchedCount++;
         } else {
-          // 若有匹配行，移除“无”提示
-          if (noDataRow) {
-            noDataRow.remove();
-          }
+          row.style.display = 'none';
         }
       });
+
+      // 如果没有匹配则显示“无”提示行
+      let noDataRow = tbody.querySelector('.no-data');
+      if (matchedCount === 0) {
+        if (!noDataRow) {
+          noDataRow = document.createElement('tr');
+          noDataRow.className = 'no-data';
+          const td = document.createElement('td');
+          td.colSpan = tbody.parentNode.querySelector('thead tr').childElementCount;
+          td.textContent = '无';
+          noDataRow.appendChild(td);
+          tbody.appendChild(noDataRow);
+        }
+      } else {
+        if (noDataRow) {
+          noDataRow.remove();
+        }
+      }
+    }
+
+    // 重置当前表格所有行的显示状态（用于切换选项卡时清除过滤效果）
+    function resetTable(sectionId) {
+      const tbody = document.getElementById(sectionId).querySelector('table tbody');
+      Array.from(tbody.rows).forEach(row => {
+        row.style.display = '';
+      });
+      // 如果有“无”提示行也移除
+      const noDataRow = tbody.querySelector('.no-data');
+      if (noDataRow) {
+        noDataRow.remove();
+      }
     }
   </script>
 </body>
