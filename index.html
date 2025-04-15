@@ -27,26 +27,49 @@
     .search-box {
       margin-bottom: 20px;
     }
+    nav {
+      margin: 10px 0;
+    }
+    nav a {
+      margin-right: 15px;
+      text-decoration: none;
+      color: #0066cc;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+    .no-data td {
+      color: #999;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
   <h1>排行榜汇总</h1>
 
+  <!-- 导航链接，可点击跳转到指定排行榜 -->
+  <nav>
+    <a href="#tradingSection">TRADING</a>
+    <a href="#stakingSection">STAKING</a>
+    <a href="#discordSection">DISCORD</a>
+    <a href="#xcomSection">X.COM</a>
+  </nav>
+
   <!-- 批量查询/过滤输入框 -->
   <div class="search-box">
-    <input type="text" id="queryInput" placeholder="请输入关键词查询..." style="width:300px; padding:8px;">
+    <input type="text" id="queryInput" placeholder="请输入关键词查询，如地址..." style="width:300px; padding:8px;">
     <button onclick="filterTables()">查询</button>
   </div>
 
   <!-- TRADING排行榜 -->
-  <section>
+  <section id="tradingSection">
     <h2>TRADING</h2>
     <table id="tradingTable">
       <thead>
         <tr>
           <th>排名</th>
-          <th>名称</th>
-          <th>数值</th>
+          <th>地址</th>
+          <th>分数</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -54,14 +77,14 @@
   </section>
 
   <!-- STAKING排行榜 -->
-  <section>
+  <section id="stakingSection">
     <h2>STAKING</h2>
     <table id="stakingTable">
       <thead>
         <tr>
           <th>排名</th>
-          <th>名称</th>
-          <th>数值</th>
+          <th>地址</th>
+          <th>分数</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -69,14 +92,14 @@
   </section>
 
   <!-- DISCORD排行榜 -->
-  <section>
+  <section id="discordSection">
     <h2>DISCORD</h2>
     <table id="discordTable">
       <thead>
         <tr>
           <th>排名</th>
-          <th>名称</th>
-          <th>数值</th>
+          <th>地址</th>
+          <th>分数</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -84,14 +107,14 @@
   </section>
 
   <!-- X.COM排行榜 -->
-  <section>
+  <section id="xcomSection">
     <h2>X.COM</h2>
     <table id="xcomTable">
       <thead>
         <tr>
           <th>排名</th>
-          <th>名称</th>
-          <th>数值</th>
+          <th>地址</th>
+          <th>分数</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -99,7 +122,10 @@
   </section>
 
   <script>
-    // 利用 Fetch API 加载 TXT 文件并解析数据，假设数据格式为“排名,名称,数值”
+    // 正则匹配行: "排名: 1, 地址: 0x123..., 分数: 10000"
+    const lineRegex = /排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
+
+    // 加载并解析单个排行榜文件
     async function loadLeaderboard(filePath, tableId) {
       try {
         const response = await fetch(filePath);
@@ -107,18 +133,35 @@
           throw new Error('无法加载 ' + filePath);
         }
         const text = await response.text();
-        const rows = text.trim().split('\n');
+        const lines = text.trim().split('\n');
         const tbody = document.getElementById(tableId).querySelector('tbody');
 
-        rows.forEach(line => {
-          const parts = line.split(','); // 根据实际分隔符调整
-          if (parts.length >= 3) {
+        lines.forEach(line => {
+          // 使用正则解析一行数据
+          const match = line.match(lineRegex);
+          if (match) {
+            const rank = match[1];
+            const address = match[2];
+            const score = match[3];
+
+            // 创建表格行并填充
             const tr = document.createElement('tr');
-            parts.forEach(part => {
-              const td = document.createElement('td');
-              td.textContent = part.trim();
-              tr.appendChild(td);
-            });
+
+            // "排名"
+            let tdRank = document.createElement('td');
+            tdRank.textContent = rank;
+            tr.appendChild(tdRank);
+
+            // "地址"
+            let tdAddress = document.createElement('td');
+            tdAddress.textContent = address;
+            tr.appendChild(tdAddress);
+
+            // "分数"
+            let tdScore = document.createElement('td');
+            tdScore.textContent = score;
+            tr.appendChild(tdScore);
+
             tbody.appendChild(tr);
           }
         });
@@ -127,29 +170,53 @@
       }
     }
 
-    // 加载所有排行榜数据
+    // 分别加载四个排行榜数据
     loadLeaderboard('data/trading.txt', 'tradingTable');
     loadLeaderboard('data/staking.txt', 'stakingTable');
     loadLeaderboard('data/discord.txt', 'discordTable');
     loadLeaderboard('data/xcom.txt', 'xcomTable');
 
-    // 批量查询功能：根据输入关键词过滤所有表格中包含该关键词的行
+    // 批量查询：根据输入关键词，显示匹配的行，不匹配的行隐藏；
+    // 若某个表格完全无匹配，则显示“无”
     function filterTables() {
       const query = document.getElementById('queryInput').value.trim().toLowerCase();
-      
-      // 获取所有表格的 tbody 元素
       const tbodies = document.querySelectorAll('table tbody');
+
       tbodies.forEach(tbody => {
-        // 遍历每一行
-        Array.from(tbody.rows).forEach(row => {
-          let text = row.textContent.toLowerCase();
-          // 如果包含关键词则显示，否则隐藏
+        let matchedCount = 0;
+        const rows = Array.from(tbody.rows);
+
+        // 先对所有行做过滤
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
           if (text.includes(query)) {
             row.style.display = '';
+            matchedCount++;
           } else {
             row.style.display = 'none';
           }
         });
+
+        // 若所有行都不匹配，则添加“无”提示行
+        let noDataRow = tbody.querySelector('.no-data');
+        if (matchedCount === 0) {
+          // 如果没有找到“无”提示行，则创建
+          if (!noDataRow) {
+            noDataRow = document.createElement('tr');
+            noDataRow.className = 'no-data';
+            const td = document.createElement('td');
+            // 跨越表头的列数
+            td.colSpan = tbody.parentNode.querySelector('thead tr').childElementCount;
+            td.textContent = '无';
+            noDataRow.appendChild(td);
+            tbody.appendChild(noDataRow);
+          }
+        } else {
+          // 若有匹配行，移除“无”提示
+          if (noDataRow) {
+            noDataRow.remove();
+          }
+        }
       });
     }
   </script>
