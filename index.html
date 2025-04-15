@@ -154,15 +154,30 @@
 
             const tr = document.createElement('tr');
 
-            let tdRank = document.createElement('td');
+            // 添加排名列
+            const tdRank = document.createElement('td');
             tdRank.textContent = rank;
             tr.appendChild(tdRank);
 
-            let tdAddress = document.createElement('td');
-            tdAddress.textContent = address;
+            // 添加地址列，并根据所属排行榜创建链接
+            const tdAddress = document.createElement('td');
+            const link = document.createElement('a');
+            link.textContent = address;
+            link.target = "_blank";
+            if (tableId === 'tradingTable') {
+              link.href = 'https://debank.com/profile/' + address;
+            } else if (tableId === 'stakingTable') {
+              link.href = 'https://app.getnimbus.io/?tab=token&type=SOL&chain=ALL&address=' + address;
+            } else if (tableId === 'xcomTable') {
+              link.href = 'https://x.com/' + address;
+            } else {
+              link.href = '#';
+            }
+            tdAddress.appendChild(link);
             tr.appendChild(tdAddress);
 
-            let tdScore = document.createElement('td');
+            // 添加分数列
+            const tdScore = document.createElement('td');
             tdScore.textContent = score;
             tr.appendChild(tdScore);
 
@@ -192,11 +207,11 @@
         const sections = document.querySelectorAll('.leaderboard-section');
         sections.forEach(section => section.style.display = 'none');
 
-        // 显示点击对应的排行榜
+        // 显示对应排行榜
         const targetId = this.getAttribute('data-target');
         document.getElementById(targetId).style.display = 'block';
 
-        // 清空搜索输入并重置过滤状态
+        // 清空搜索输入框并重置过滤状态
         document.getElementById('queryInput').value = '';
         resetTable(targetId);
       });
@@ -214,7 +229,7 @@
       const currentSection = Array.from(document.querySelectorAll('.leaderboard-section'))
                             .find(section => section.style.display !== 'none');
       if (!currentSection) return;
-      
+
       const tbody = currentSection.querySelector('table tbody');
       let matchedCount = 0;
       Array.from(tbody.rows).forEach(row => {
@@ -246,13 +261,12 @@
       }
     }
 
-    // 重置当前表格所有行的显示状态（用于切换选项卡时清除过滤效果）
+    // 重置当前表格所有行显示状态（用于切换选项卡时清除过滤效果）
     function resetTable(sectionId) {
       const tbody = document.getElementById(sectionId).querySelector('table tbody');
       Array.from(tbody.rows).forEach(row => {
         row.style.display = '';
       });
-      // 如果有“无”提示行也移除
       const noDataRow = tbody.querySelector('.no-data');
       if (noDataRow) {
         noDataRow.remove();
