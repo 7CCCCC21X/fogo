@@ -4,23 +4,34 @@
   <meta charset="UTF-8">
   <title>排行榜汇总</title>
   <style>
+    /* 页面整体容器样式 */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
+      margin: 0;
+      padding: 0;
+      background-color: #fafafa;
     }
     h1, h2 {
       color: #333;
+      text-align: center;
     }
     .tab-nav {
       margin-bottom: 20px;
+      text-align: center;
     }
     .tab-nav button {
       padding: 10px 20px;
-      margin-right: 10px;
+      margin: 0 5px;
       border: none;
       background-color: #f5f5f5;
       cursor: pointer;
       border-radius: 4px;
+      font-size: 14px;
     }
     .tab-nav button.active {
       background-color: #0066cc;
@@ -28,6 +39,18 @@
     }
     .search-box {
       margin-bottom: 20px;
+      text-align: center;
+    }
+    .search-box input {
+      width: 300px;
+      padding: 8px;
+      font-size: 14px;
+    }
+    .search-box button {
+      padding: 8px 16px;
+      font-size: 14px;
+      margin-left: 5px;
+      cursor: pointer;
     }
     table {
       width: 100%;
@@ -38,6 +61,7 @@
       border: 1px solid #ccc;
       padding: 8px;
       text-align: center;
+      font-size: 14px;
     }
     th {
       background-color: #f5f5f5;
@@ -50,16 +74,16 @@
     .leaderboard-section {
       display: none;
     }
-    /* 统计区域样式 */
+    /* 汇总区域样式 */
     #statsSection {
       margin-top: 30px;
       font-weight: bold;
       font-size: 16px;
     }
     #statsSection table {
-      width: auto;
+      width: 100%;
       border-collapse: collapse;
-      margin: 0 auto;
+      margin: 20px 0;
     }
     #statsSection th, #statsSection td {
       border: 1px solid #ccc;
@@ -78,92 +102,97 @@
   </style>
 </head>
 <body>
-  <h1>排行榜汇总</h1>
+  <div class="container">
+    <h1>排行榜汇总</h1>
 
-  <!-- 选项卡导航：包含四个排行榜及“汇总” -->
-  <div class="tab-nav">
-    <button data-target="tradingSection" class="tab-btn active">TRADING</button>
-    <button data-target="stakingSection" class="tab-btn">STAKING</button>
-    <button data-target="discordSection" class="tab-btn">DISCORD</button>
-    <button data-target="xcomSection" class="tab-btn">X.COM</button>
-    <button data-target="statsSection" class="tab-btn">汇总</button>
-  </div>
+    <!-- 选项卡导航：包含四个排行榜及“汇总”按钮 -->
+    <div class="tab-nav">
+      <button data-target="tradingSection" class="tab-btn active">TRADING</button>
+      <button data-target="stakingSection" class="tab-btn">STAKING</button>
+      <button data-target="discordSection" class="tab-btn">DISCORD</button>
+      <button data-target="xcomSection" class="tab-btn">X.COM</button>
+      <button data-target="statsSection" class="tab-btn">汇总</button>
+    </div>
 
-  <!-- 批量查询（仅针对当前显示的排行榜） -->
-  <div class="search-box">
-    <input type="text" id="queryInput" placeholder="请输入地址或关键词查询..." style="width:300px; padding:8px;">
-    <button onclick="filterCurrentTable()">查询</button>
-  </div>
+    <!-- 批量查询区域（仅针对当前显示的排行榜） -->
+    <div class="search-box" id="searchBox">
+      <input type="text" id="queryInput" placeholder="请输入地址关键字进行查询...">
+      <button onclick="filterCurrentTable()">查询</button>
+    </div>
 
-  <!-- TRADING 排行榜 -->
-  <section id="tradingSection" class="leaderboard-section">
-    <h2>TRADING</h2>
-    <table id="tradingTable">
-      <thead>
-        <tr>
-          <th>排名</th>
-          <th>地址</th>
-          <th>分数</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+    <!-- TRADING 排行榜 -->
+    <section id="tradingSection" class="leaderboard-section">
+      <h2>TRADING</h2>
+      <table id="tradingTable">
+        <thead>
+          <tr>
+            <th>排名</th>
+            <th>地址</th>
+            <th>分数</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
 
-  <!-- STAKING 排行榜 -->
-  <section id="stakingSection" class="leaderboard-section">
-    <h2>STAKING</h2>
-    <table id="stakingTable">
-      <thead>
-        <tr>
-          <th>排名</th>
-          <th>地址</th>
-          <th>分数</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+    <!-- STAKING 排行榜 -->
+    <section id="stakingSection" class="leaderboard-section">
+      <h2>STAKING</h2>
+      <table id="stakingTable">
+        <thead>
+          <tr>
+            <th>排名</th>
+            <th>地址</th>
+            <th>分数</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
 
-  <!-- DISCORD 排行榜 -->
-  <section id="discordSection" class="leaderboard-section">
-    <h2>DISCORD</h2>
-    <table id="discordTable">
-      <thead>
-        <tr>
-          <th>排名</th>
-          <th>地址</th>
-          <th>分数</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+    <!-- DISCORD 排行榜 -->
+    <section id="discordSection" class="leaderboard-section">
+      <h2>DISCORD</h2>
+      <table id="discordTable">
+        <thead>
+          <tr>
+            <th>排名</th>
+            <th>地址</th>
+            <th>分数</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
 
-  <!-- X.COM 排行榜 -->
-  <section id="xcomSection" class="leaderboard-section">
-    <h2>X.COM</h2>
-    <table id="xcomTable">
-      <thead>
-        <tr>
-          <th>排名</th>
-          <th>地址</th>
-          <th>分数</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+    <!-- X.COM 排行榜 -->
+    <section id="xcomSection" class="leaderboard-section">
+      <h2>X.COM</h2>
+      <table id="xcomTable">
+        <thead>
+          <tr>
+            <th>排名</th>
+            <th>地址</th>
+            <th>分数</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
 
-  <!-- 汇总数据区域 -->
-  <section id="statsSection" class="leaderboard-section">
-    <h2>汇总数据</h2>
-    <div id="statsContent" style="font-weight: bold; font-size: 16px;"></div>
-  </section>
+    <!-- 汇总数据区域 -->
+    <section id="statsSection" class="leaderboard-section">
+      <h2>汇总数据</h2>
+      <p style="text-align:center; font-size:14px; color:#555;">
+        用户数量 = 该排行榜参与地址数； 总分 = 该排行榜所有地址分数之和
+      </p>
+      <div id="statsContent"></div>
+    </section>
 
-  <!-- 单独的作者链接展示 -->
-  <div id="authorLink">
-    作者：<a href="https://x.com/0xXIAOc" target="_blank">小C</a>
+    <!-- 单独的作者链接展示 -->
+    <div id="authorLink">
+      作者：<a href="https://x.com/0xXIAOc" target="_blank">小C</a>
+    </div>
   </div>
 
   <script>
@@ -173,7 +202,7 @@
      */
     const lineRegex = /排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
 
-    // 加载单个排行榜数据，type 参数用于判断跳转链接
+    // 使用统一函数加载并解析排行榜数据
     async function loadLeaderboard(filePath, tableId, type) {
       try {
         const response = await fetch(filePath);
@@ -183,7 +212,14 @@
         const text = await response.text();
         const lines = text.trim().split('\n');
         const tbody = document.getElementById(tableId).querySelector('tbody');
-        tbody.innerHTML = ''; // 清空原有数据
+        tbody.innerHTML = ''; // 清空现有数据
+
+        if (lines[0] === "") {
+          // 若文件为空，则显示暂无数据
+          tbody.innerHTML = `<tr class="no-data"><td colspan="3">暂无数据</td></tr>`;
+          updateSummary();
+          return;
+        }
 
         lines.forEach(line => {
           const match = line.match(lineRegex);
@@ -194,15 +230,15 @@
 
             const tr = document.createElement('tr');
 
-            // 排名
+            // 创建排名单元格
             const tdRank = document.createElement('td');
             tdRank.textContent = rank;
             tr.appendChild(tdRank);
 
-            // 地址
+            // 创建地址单元格
             const tdAddress = document.createElement('td');
-            // 对于 DISCORD，直接使用文本显示地址；其他的创建超链接
             if (type === 'discord') {
+              // DISCORD 直接显示文本
               tdAddress.textContent = address;
             } else {
               const link = document.createElement('a');
@@ -221,7 +257,7 @@
             }
             tr.appendChild(tdAddress);
 
-            // 分数
+            // 创建分数字段
             const tdScore = document.createElement('td');
             tdScore.textContent = score;
             tr.appendChild(tdScore);
@@ -229,15 +265,15 @@
             tbody.appendChild(tr);
           }
         });
-
-        // 更新汇总数据
         updateSummary();
       } catch (error) {
         console.error('Error loading leaderboard:', error);
+        const tbody = document.getElementById(tableId).querySelector('tbody');
+        tbody.innerHTML = `<tr class="no-data"><td colspan="3">加载失败，请稍后重试</td></tr>`;
       }
     }
 
-    // 分别加载四个排行榜数据
+    // 分别加载4个排行榜数据
     loadLeaderboard('data/trading.txt', 'tradingTable', 'trading');
     loadLeaderboard('data/staking.txt', 'stakingTable', 'staking');
     loadLeaderboard('data/discord.txt', 'discordTable', 'discord');
@@ -247,32 +283,37 @@
     const tabBtns = document.querySelectorAll('.tab-btn');
     tabBtns.forEach(btn => {
       btn.addEventListener('click', function() {
-        // 移除所有按钮 active 样式
+        // 设为当前按钮为active状态
         tabBtns.forEach(b => b.classList.remove('active'));
         this.classList.add('active');
-        // 隐藏所有排行榜 section
-        const sections = document.querySelectorAll('.leaderboard-section');
-        sections.forEach(sec => sec.style.display = 'none');
-        // 显示对应的 section
+
+        // 隐藏所有section
+        document.querySelectorAll('.leaderboard-section').forEach(sec => sec.style.display = 'none');
+
+        // 显示选中section
         const targetId = this.getAttribute('data-target');
         document.getElementById(targetId).style.display = 'block';
-        // 重置搜索
-        document.getElementById('queryInput').value = '';
-        if (targetId !== 'statsSection') {
+
+        // 根据是否是汇总页面决定是否显示搜索框
+        const searchBox = document.getElementById('searchBox');
+        if (targetId === 'statsSection') {
+          searchBox.style.display = 'none';
+        } else {
+          searchBox.style.display = 'block';
+          document.getElementById('queryInput').value = '';
           resetTable(targetId);
         }
       });
     });
 
-    // 页面加载完成后，默认显示第一个排行榜
+    // 默认显示第一个排行榜
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('tradingSection').style.display = 'block';
     });
 
-    // 批量查询：仅针对当前显示的排行榜
+    // 批量查询：仅对当前显示的排行榜有效
     function filterCurrentTable() {
       const query = document.getElementById('queryInput').value.trim().toLowerCase();
-      // 找到当前显示的榜单（排除汇总）
       const currentSection = Array.from(document.querySelectorAll('.leaderboard-section'))
                                  .find(s => s.style.display !== 'none' && s.id !== 'statsSection');
       if (!currentSection) return;
@@ -293,7 +334,7 @@
           noDataRow = document.createElement('tr');
           noDataRow.className = 'no-data';
           const td = document.createElement('td');
-          td.colSpan = 3; // 3列：排名，地址，分数
+          td.colSpan = 3;
           td.textContent = '无';
           noDataRow.appendChild(td);
           tbody.appendChild(noDataRow);
@@ -303,7 +344,7 @@
       }
     }
 
-    // 重置当前表格过滤状态（切换选项卡时清除）
+    // 重置当前表格过滤状态
     function resetTable(sectionId) {
       const tbody = document.getElementById(sectionId).querySelector('tbody');
       Array.from(tbody.rows).forEach(row => row.style.display = '');
@@ -311,7 +352,7 @@
       if (noDataRow) noDataRow.remove();
     }
 
-    // 汇总：统计各排行榜的用户数量与总分
+    // 更新汇总数据，统计各排行榜的用户数和总分
     function updateSummary() {
       const tables = [
         { id: 'tradingTable', name: 'TRADING' },
@@ -319,7 +360,6 @@
         { id: 'discordTable', name: 'DISCORD' },
         { id: 'xcomTable', name: 'X.COM' }
       ];
-
       let overallUserCount = 0;
       let overallTotalScore = 0;
       let html = `<table border="1" cellspacing="0" cellpadding="6">
@@ -331,16 +371,14 @@
                       </tr>
                     </thead>
                     <tbody>`;
-
       tables.forEach(t => {
         const tbody = document.getElementById(t.id).querySelector('tbody');
         const rows = Array.from(tbody.rows).filter(r => !r.classList.contains('no-data'));
-        let userCount = rows.length;
-        let totalScore = rows.reduce((sum, row) => {
+        const userCount = rows.length;
+        const totalScore = rows.reduce((sum, row) => {
           const scoreText = row.cells[2]?.textContent || '0';
           return sum + (parseFloat(scoreText) || 0);
         }, 0);
-
         html += `<tr>
                    <td>${t.name}</td>
                    <td>${userCount}</td>
@@ -349,14 +387,12 @@
         overallUserCount += userCount;
         overallTotalScore += totalScore;
       });
-
       html += `<tr style="font-weight:bold;">
                  <td>总计</td>
                  <td>${overallUserCount}</td>
                  <td>${overallTotalScore}</td>
                </tr>`;
       html += `</tbody></table>`;
-
       document.getElementById('statsContent').innerHTML = html;
     }
   </script>
