@@ -41,7 +41,7 @@
       margin-bottom: 20px;
       text-align: center;
     }
-    .search-box input {
+    .search-box textarea {
       width: 300px;
       padding: 8px;
       font-size: 14px;
@@ -114,9 +114,9 @@
       <button data-target="statsSection" class="tab-btn">汇总</button>
     </div>
 
-    <!-- 批量查询区域（仅针对当前显示的排行榜） -->
+    <!-- 批量查询区域（仅针对当前显示的排行榜），使用多行文本框 -->
     <div class="search-box" id="searchBox">
-      <input type="text" id="queryInput" placeholder="请输入地址关键字进行查询...">
+      <textarea id="queryInput" placeholder="每行输入一个地址进行查询..." rows="4"></textarea>
       <button onclick="filterCurrentTable()">查询</button>
     </div>
 
@@ -214,9 +214,9 @@
         const tbody = document.getElementById(tableId).querySelector('tbody');
         tbody.innerHTML = ''; // 清空现有数据
 
-        if (lines[0] === "") {
+        if (lines.length === 0 || (lines.length === 1 && lines[0] === "")) {
           // 若文件为空，则显示暂无数据
-          tbody.innerHTML = `<tr class="no-data"><td colspan="3">暂无数据</td></tr>`;
+          tbody.innerHTML = '<tr class="no-data"><td colspan="3">暂无数据</td></tr>';
           updateSummary();
           return;
         }
@@ -269,7 +269,7 @@
       } catch (error) {
         console.error('Error loading leaderboard:', error);
         const tbody = document.getElementById(tableId).querySelector('tbody');
-        tbody.innerHTML = `<tr class="no-data"><td colspan="3">加载失败，请稍后重试</td></tr>`;
+        tbody.innerHTML = '<tr class="no-data"><td colspan="3">加载失败，请稍后重试</td></tr>';
       }
     }
 
@@ -311,23 +311,39 @@
       document.getElementById('tradingSection').style.display = 'block';
     });
 
-    // 批量查询：仅对当前显示的排行榜有效
+    // 修改后的批量查询函数：支持多行（批量）地址查询，只显示匹配的行
     function filterCurrentTable() {
-      const query = document.getElementById('queryInput').value.trim().toLowerCase();
+      // 按行分割输入的文本，并过滤掉空行
+      const rawQueries = document.getElementById('queryInput').value.trim().toLowerCase();
+      if (!rawQueries) {
+        // 输入为空时重置当前表格显示状态
+        const currentSection = Array.from(document.querySelectorAll('.leaderboard-section'))
+                                   .find(s => s.style.display !== 'none' && s.id !== 'statsSection');
+        if (currentSection) resetTable(currentSection.id);
+        return;
+      }
+      const queries = rawQueries.split('\n').map(line => line.trim()).filter(line => line);
+
+      // 找到当前显示的排行榜区域（排除汇总区域）
       const currentSection = Array.from(document.querySelectorAll('.leaderboard-section'))
-                                 .find(s => s.style.display !== 'none' && s.id !== 'statsSection');
+                                  .find(s => s.style.display !== 'none' && s.id !== 'statsSection');
       if (!currentSection) return;
       const tbody = currentSection.querySelector('tbody');
       let matchedCount = 0;
+
+      // 遍历所有行，对每行文本判断是否包含任一查询关键字
       Array.from(tbody.rows).forEach(row => {
         const text = row.textContent.toLowerCase();
-        if (text.includes(query)) {
+        const matchFound = queries.some(query => text.includes(query));
+        if (matchFound) {
           row.style.display = '';
           matchedCount++;
         } else {
           row.style.display = 'none';
         }
       });
+
+      // 如果没有匹配结果，则显示“无”提示行
       let noDataRow = tbody.querySelector('.no-data');
       if (matchedCount === 0) {
         if (!noDataRow) {
@@ -362,15 +378,15 @@
       ];
       let overallUserCount = 0;
       let overallTotalScore = 0;
-      let html = `<table border="1" cellspacing="0" cellpadding="6">
-                    <thead>
-                      <tr>
-                        <th>排行榜</th>
-                        <th>用户数量</th>
-                        <th>总分</th>
-                      </tr>
-                    </thead>
-                    <tbody>`;
+      let html = '<table border="1" cellspacing="0" cellpadding="6">' +
+                 '<thead>' +
+                 '<tr>' +
+                 '<th>排行榜</th>' +
+                 '<th>用户数量</th>' +
+                 '<th>总分</th>' +
+                 '</tr>' +
+                 '</thead>' +
+                 '<tbody>';
       tables.forEach(t => {
         const tbody = document.getElementById(t.id).querySelector('tbody');
         const rows = Array.from(tbody.rows).filter(r => !r.classList.contains('no-data'));
@@ -379,20 +395,20 @@
           const scoreText = row.cells[2]?.textContent || '0';
           return sum + (parseFloat(scoreText) || 0);
         }, 0);
-        html += `<tr>
-                   <td>${t.name}</td>
-                   <td>${userCount}</td>
-                   <td>${totalScore}</td>
-                 </tr>`;
+        html += '<tr>' +
+                '<td>' + t.name + '</td>' +
+                '<td>' + userCount + '</td>' +
+                '<td>' + totalScore + '</td>' +
+                '</tr>';
         overallUserCount += userCount;
         overallTotalScore += totalScore;
       });
-      html += `<tr style="font-weight:bold;">
-                 <td>总计</td>
-                 <td>${overallUserCount}</td>
-                 <td>${overallTotalScore}</td>
-               </tr>`;
-      html += `</tbody></table>`;
+      html += '<tr style="font-weight:bold;">' +
+              '<td>总计</td>' +
+              '<td>' + overallUserCount + '</td>' +
+              '<td>' + overallTotalScore + '</td>' +
+              '</tr>';
+      html += '</tbody></table>';
       document.getElementById('statsContent').innerHTML = html;
     }
   </script>
