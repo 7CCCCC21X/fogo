@@ -41,10 +41,13 @@
       margin-bottom: 20px;
       text-align: center;
     }
+    /* 修改后的文本框，宽度设置为500px，高度设置为200px */
     .search-box textarea {
-      width: 300px;
+      width: 500px;
+      height: 200px;
       padding: 8px;
       font-size: 14px;
+      resize: both; /* 可拖拽调整大小 */
     }
     .search-box button {
       padding: 8px 16px;
@@ -117,7 +120,7 @@
     <!-- 批量查询区域（仅针对当前显示的排行榜），使用多行文本框 -->
     <div class="search-box" id="searchBox">
       <textarea id="queryInput" placeholder="每行输入一个地址进行查询..." rows="4"></textarea>
-      <button onclick="filterCurrentTable()">查询</button>
+      <button onclick="filterCurrentTable()">查询（支持批量地址）</button>
     </div>
 
     <!-- TRADING 排行榜 -->
