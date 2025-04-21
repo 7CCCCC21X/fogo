@@ -10,7 +10,7 @@
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);transition:.3s}
 .container{max-width:1200px;margin:0 auto;padding:20px}
 h1,h2{text-align:center;margin:.3em 0}
-.tab-nav{text-align:center;margin-bottom:15px;overflow-x:auto;white-space:nowrap}
+.tab-nav{text-align:center;margin-bottom:15px;white-space:nowrap;overflow-x:auto}
 .tab-nav button{padding:8px 18px;margin:0 4px;border:none;border-radius:4px;background:var(--th);cursor:pointer;font-size:14px;transition:.3s}
 .tab-nav button.active{background:var(--accent);color:#fff}
 .toolbar{text-align:center;margin-bottom:15px}
@@ -52,7 +52,7 @@ tr:hover{background:rgba(0,0,0,.04)}
     <button id="exportBtn">导出 CSV</button>
   </div>
 
-  <!-- 四榜单（结构不变） -->
+  <!-- 四榜单 -->
   <div id="trading"><h2>TRADING</h2><div class="table-wrap"><table id="tradingTable"><thead><tr>
     <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
   </tr></thead><tbody></tbody></table></div></div>
@@ -83,59 +83,58 @@ tr:hover{background:rgba(0,0,0,.04)}
 </div>
 
 <script>
-/* === 配置 === */
+/* ===== 配置 ===== */
 const boards={
   trading:['data/trading.txt','data/trading-week1.txt','tradingTable','trading'],
   staking:['data/staking.txt','data/staking-week1.txt','stakingTable','staking'],
   discord:['data/discord.txt','data/discord-week1.txt','discordTable','discord'],
   xcom   :['data/xcom.txt','data/xcom.week1.txt','xcomTable','xcom']
 };
-const lineRe=/排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
+const re=/排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
 const nf=n=>Number(n).toLocaleString('en-US');
-const safe=n=>isNaN(n)?0:n;
 const loaded={}; let trendChart=null;
 
-/* === 主题 === */
+/* ===== 主题 ===== */
 themeToggle.onclick=()=>{const dark=document.documentElement.getAttribute('data-theme')==='dark';
   document.documentElement.setAttribute('data-theme',dark?'':'dark');
   themeToggle.textContent=dark?'🌙':'☀️';};
 
-/* === 加载榜单 === */
+/* ===== 加载榜单 ===== */
 async function loadBoard(name){
-  if(loaded[name]) return;
+  if(loaded[name])return;
   const [curP,preP,tableId,type]=boards[name];
   const [curRes,preRes]=await Promise.all([fetch(curP),fetch(preP)]);
   if(!curRes.ok){console.error(curP,'加载失败');return;}
   const curTxt=await curRes.text();
   const preTxt=preRes.ok?await preRes.text():'';
-  const preMap=new Map();
-  preTxt.trim().split('\n').forEach(l=>{const m=l.match(lineRe);if(m)preMap.set(m[2].toLowerCase(),+m[3])});
-  const tbody=document.getElementById(tableId).querySelector('tbody');
-  const frag=document.createDocumentFragment();
+  const pre=new Map();preTxt.trim().split('\n').forEach(l=>{const m=l.match(re);if(m)pre.set(m[2].toLowerCase(),+m[3])});
+  const tbody=document.getElementById(tableId).querySelector('tbody');const frag=document.createDocumentFragment();
   curTxt.trim().split('\n').forEach(l=>{
-    const m=l.match(lineRe);if(!m)return;
-    const [_,rank,addr,curS]=m;const cur=+curS;const prev=preMap.get(addr.toLowerCase())??0;
+    const m=l.match(re);if(!m)return;
+    const [_,rank,addr,curS]=m;const cur=+curS;const prev=pre.get(addr.toLowerCase())??0;
     const diff=cur-prev;const pct=prev?((diff/prev)*100).toFixed(2):0;
     const tr=document.createElement('tr');
     tr.insertCell().textContent=rank;
-    const tdAddr=tr.insertCell();
-    if(type==='discord')tdAddr.textContent=addr;
+    const td=tr.insertCell();
+    if(type==='discord')td.textContent=addr;
     else{const a=document.createElement('a');a.textContent=addr;a.target='_blank';
       if(type==='trading')a.href='https://debank.com/profile/'+addr;
       if(type==='staking')a.href='https://app.getnimbus.io/?tab=token&type=SOL&chain=ALL&address='+addr;
-      if(type==='xcom')a.href='https://x.com/'+addr;
-      tdAddr.appendChild(a);}
+      if(type==='xcom')a.href='https://x.com/'+addr;td.appendChild(a);}
     tr.insertCell().textContent=nf(cur);
     tr.insertCell().textContent=nf(prev);
-    const tdD=tr.insertCell();tdD.textContent=`${diff>0?'▲':'▼'} ${nf(Math.abs(diff))}`;
-    tdD.className=diff>0?'diff-pos':diff<0?'diff-neg':'';
+    const tdDiff=tr.insertCell();
+    tdDiff.textContent=`${diff>0?'▲':'▼'} ${nf(Math.abs(diff))}`;
+    tdDiff.className=diff>0?'diff-pos':diff<0?'diff-neg':'';
     tr.insertCell().textContent=`${diff>0?'+':''}${pct}%`;
     frag.appendChild(tr);
   });
-  tbody.appendChild(frag); sorter(tableId,1); loaded[name]=true;
+  tbody.appendChild(frag);
+  sorter(tableId,1);
+  loaded[name]=true;
 }
 
-/* === 排序 === */
+/* ===== 排序 ===== */
 function sorter(tableId,skip=0){
   const ths=[...document.querySelector(`#${tableId} thead`).rows[0].cells];
   ths.forEach((th,i)=>{if(i<=skip)return;
@@ -150,7 +149,7 @@ function sorter(tableId,skip=0){
       document.querySelector(`#${tableId} tbody`).appendChild(f);};});
 }
 
-/* === 汇总 === */
+/* ===== 汇总 ===== */
 function buildStats(){
   const sb=document.querySelector('#statsTable tbody');const sh=document.querySelector('#statsTable thead');
   sb.innerHTML='';sh.innerHTML='<tr><th>排行榜</th><th>用户</th><th>本周</th><th>上周</th><th>变化</th><th>%</th><th>趋势</th></tr>';
@@ -159,8 +158,8 @@ function buildStats(){
     if(!loaded[name])continue;
     const trs=[...document.querySelector(`#${tid} tbody`).rows];if(!trs.length)continue;
     const users=trs.length;
-    const cur=trs.reduce((s,r)=>s+safe(+r.cells[2].textContent.replace(/,/g,'')),0);
-    const prev=trs.reduce((s,r)=>s+safe(+r.cells[3].textContent.replace(/,/g,'')),0);
+    const cur=trs.reduce((s,r)=>s+ +r.cells[2].textContent.replace(/,/g,''),0);
+    const prev=trs.reduce((s,r)=>s+ +r.cells[3].textContent.replace(/,/g,''),0);
     const diff=cur-prev;const pct=prev?((diff/prev)*100).toFixed(2):0;
     const tr=document.createElement('tr');tr.innerHTML=`
       <td>${name.toUpperCase()}</td><td>${nf(users)}</td><td>${nf(cur)}</td><td>${nf(prev)}</td>
@@ -189,7 +188,7 @@ function buildStats(){
     options:{responsive:true,plugins:{legend:{display:true}},elements:{line:{tension:.3},point:{radius:3}}});
 }
 
-/* === 搜索 / 导出 === */
+/* ===== 搜索 & 导出 ===== */
 queryBtn.onclick=()=>{
   const term=queryInput.value.trim().toLowerCase();
   const sec=[...document.querySelectorAll('.section')].find(s=>s.style.display!=='none'&&s.id!=='stats');
@@ -208,7 +207,7 @@ exportBtn.onclick=()=>{
   a.download=`${sec.id}.csv`;a.click();URL.revokeObjectURL(a.href);
 };
 
-/* === Tab === */
+/* ===== Tab ===== */
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.onclick=()=>{document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
@@ -219,7 +218,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     if(t==='stats') buildStats();};
 });
 
-/* === 首屏：并行加载四榜单，再生成汇总 === */
+/* ===== 首屏：并行加载四榜单，然后生成汇总 ===== */
 Promise.all(Object.keys(boards).map(loadBoard)).then(buildStats);
 </script>
 </body>
