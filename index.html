@@ -56,28 +56,28 @@ tr:hover{background:rgba(0,0,0,.04)}
   <div id="trading" class="section">
     <h2>TRADING</h2>
     <div class="table-wrap"><table id="tradingTable"><thead><tr>
-      <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
+      <th>排名</th><th>地址</th><th>本周分数</th><th>变化</th><th>%</th>
     </tr></thead><tbody></tbody></table></div>
   </div>
 
   <div id="staking" class="section" style="display:none">
     <h2>STAKING</h2>
     <div class="table-wrap"><table id="stakingTable"><thead><tr>
-      <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
+      <th>排名</th><th>地址</th><th>本周分数</th><th>变化</th><th>%</th>
     </tr></thead><tbody></tbody></table></div>
   </div>
 
   <div id="discord" class="section" style="display:none">
     <h2>DISCORD</h2>
     <div class="table-wrap"><table id="discordTable"><thead><tr>
-      <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
+      <th>排名</th><th>地址</th><th>本周分数</th><th>变化</th><th>%</th>
     </tr></thead><tbody></tbody></table></div>
   </div>
 
   <div id="xcom" class="section" style="display:none">
     <h2>X.COM</h2>
     <div class="table-wrap"><table id="xcomTable"><thead><tr>
-      <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
+      <th>排名</th><th>地址</th><th>本周分数</th><th>变化</th><th>%</th>
     </tr></thead><tbody></tbody></table></div>
   </div>
 
@@ -139,7 +139,6 @@ async function loadBoard(name){
       tdAddr.appendChild(a);
     }
     tr.insertCell().textContent=nf(cur);
-    tr.insertCell().textContent=prev!==null?nf(prev):'—';
     const tdDiff=tr.insertCell();
     tdDiff.textContent=diff===null?'—':`${diff>0?'▲':'▼'} ${nf(Math.abs(diff))}`;
     tdDiff.className=diff>0?'diff-pos':diff<0?'diff-neg':'';
@@ -173,38 +172,34 @@ function sorter(tableId,skip=0){
 /* 汇总 */
 function buildStats(){
   const sb=document.querySelector('#statsTable tbody');const sh=document.querySelector('#statsTable thead');
-  sh.innerHTML='<tr><th>排行榜</th><th>用户</th><th>本周</th><th>上周</th><th>变化</th><th>%</th><th>趋势</th></tr>';sb.innerHTML='';
-  let totCur=0,totPrev=0,totUsers=0;const rows=[];
+  sh.innerHTML='<tr><th>排行榜</th><th>用户</th><th>本周</th><th>变化</th><th>%</th><th>趋势</th></tr>';sb.innerHTML='';
+  let totCur=0,totUsers=0;const rows=[];
   for(const [name,[,,tid]] of Object.entries(boards)){
     if(!loaded[name])continue;
     const trs=[...document.querySelector(`#${tid} tbody`).rows];if(!trs.length)continue;
     const users=trs.length;
     const cur=trs.reduce((s,r)=>s+ +r.cells[2].textContent.replace(/,/g,''),0);
-    const prev=trs.reduce((s,r)=>s+ +r.cells[3].textContent.replace(/,/g,''),0);
-    const diff=cur-prev;const pct=prev?((diff/prev)*100).toFixed(2):0;
+    const diff=cur;const pct=0;
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${name.toUpperCase()}</td><td>${nf(users)}</td><td>${nf(cur)}</td><td>${nf(prev)}</td>
+    tr.innerHTML=`<td>${name.toUpperCase()}</td><td>${nf(users)}</td><td>${nf(cur)}</td>
                   <td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${nf(diff)}</td>
-                  <td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${diff>0?'+':''}${pct}%</td><td><canvas class="spark"></canvas></td>`;
+                  <td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${diff>0?'+':''}${pct}%</td>
+                  <td><canvas class="spark"></canvas></td>`;
     sb.appendChild(tr);
     const c=tr.querySelector('canvas');
-    new Chart(c,{type:'line',data:{labels:['上周','本周'],datasets:[{data:[prev,cur]}]},
+    new Chart(c,{type:'line',data:{labels:['本周'],datasets:[{data:[cur]}]},
       options:{plugins:{legend:{display:false}},elements:{line:{tension:.3,borderWidth:1},point:{radius:0}},
                scales:{x:{display:false},y:{display:false}}}});
-    totCur+=cur;totPrev+=prev;totUsers+=users;rows.push({name,cur,prev});
+    totCur+=cur;totUsers+=users;rows.push({name,cur});
   }
-  const d=totCur-totPrev;pctTot=totPrev?((d/totPrev)*100).toFixed(2):0;
   const trT=document.createElement('tr');trT.style.fontWeight='bold';
-  trT.innerHTML=`<td>总计</td><td>${nf(totUsers)}</td><td>${nf(totCur)}</td><td>${nf(totPrev)}</td>
-                <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${nf(d)}</td>
-                <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${d>0?'+':''}${pctTot}%</td><td></td>`;
+  trT.innerHTML=`<td>总计</td><td>${nf(totUsers)}</td><td>${nf(totCur)}</td><td></td><td></td><td></td>`;
   sb.appendChild(trT);
   sorter('statsTable');
   const ctx=document.getElementById('trendChart').getContext('2d');
   if(trendChart)trendChart.destroy();
   trendChart=new Chart(ctx,{type:'line',
-    data:{labels:rows.map(r=>r.name.toUpperCase()),datasets:[{label:'本周',data:rows.map(r=>r.cur)},
-      {label:'上周',data:rows.map(r=>r.prev)}]},
+    data:{labels:rows.map(r=>r.name.toUpperCase()),datasets:[{label:'本周',data:rows.map(r=>r.cur)}]},
     options:{responsive:true,plugins:{legend:{display:true}},elements:{line:{tension:.3},point:{radius:3}}}});
 };
 
