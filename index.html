@@ -126,7 +126,7 @@ async function loadBoard(name){
   const frag=document.createDocumentFragment();
   curTxt.trim().split('\n').forEach(l=>{
     const m=l.match(lineRe);if(!m)return;
-    const [_,rank,addr,curS]=m;const cur=+curS;const prev=preMap.get(addr.toLowerCase())??null;
+    const [_,rank,addr,curS]=m;const cur=+curS;const prev=preMap.get(addr.toLowerCase())??0; // Default to 0 if no previous score
     const diff=prev!==null?cur-prev:null;const pct=prev?((diff/prev)*100).toFixed(2):null;
     const tr=document.createElement('tr');
     tr.insertCell().textContent=rank;
@@ -139,7 +139,7 @@ async function loadBoard(name){
       tdAddr.appendChild(a);
     }
     tr.insertCell().textContent=nf(cur);
-    tr.insertCell().textContent=prev!==null?nf(prev):'—';
+    tr.insertCell().textContent=prev!==0 ? nf(prev) : '0'; // Display '0' if no previous score
     const tdDiff=tr.insertCell();
     tdDiff.textContent=diff===null?'—':`${diff>0?'▲':'▼'} ${nf(Math.abs(diff))}`;
     tdDiff.className=diff>0?'diff-pos':diff<0?'diff-neg':'';
@@ -155,7 +155,7 @@ async function loadBoard(name){
 function sorter(tableId,skip=0){
   const ths=[...document.querySelector(`#${tableId} thead`).rows[0].cells];
   ths.forEach((th,i)=>{if(i<=skip)return;
-    th.onclick=()=>{
+    th.onclick=()=>{ 
       const dir=th.classList.contains('sort-asc')?'desc':'asc';
       ths.forEach(t=>t.classList.remove('sort-asc','sort-desc'));
       th.classList.add(dir==='asc'?'sort-asc':'sort-desc');
