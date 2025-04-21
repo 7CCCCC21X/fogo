@@ -56,28 +56,28 @@ tr:hover{background:rgba(0,0,0,.04)}
   <div id="trading" class="section">
     <h2>TRADING</h2>
     <div class="table-wrap"><table id="tradingTable"><thead><tr>
-      <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
+      <th>排名</th><th>地址</th><th>本周分数</th>
     </tr></thead><tbody></tbody></table></div>
   </div>
 
   <div id="staking" class="section" style="display:none">
     <h2>STAKING</h2>
     <div class="table-wrap"><table id="stakingTable"><thead><tr>
-      <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
+      <th>排名</th><th>地址</th><th>本周分数</th>
     </tr></thead><tbody></tbody></table></div>
   </div>
 
   <div id="discord" class="section" style="display:none">
     <h2>DISCORD</h2>
     <div class="table-wrap"><table id="discordTable"><thead><tr>
-      <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
+      <th>排名</th><th>地址</th><th>本周分数</th>
     </tr></thead><tbody></tbody></table></div>
   </div>
 
   <div id="xcom" class="section" style="display:none">
     <h2>X.COM</h2>
     <div class="table-wrap"><table id="xcomTable"><thead><tr>
-      <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
+      <th>排名</th><th>地址</th><th>本周分数</th>
     </tr></thead><tbody></tbody></table></div>
   </div>
 
@@ -85,8 +85,31 @@ tr:hover{background:rgba(0,0,0,.04)}
   <div id="stats" class="section" style="display:none">
     <h2>汇总数据</h2>
     <p style="text-align:center;font-size:14px;color:#888">用户 = 地址数；总分 = 本周分</p>
-    <div class="table-wrap"><table id="statsTable"><thead></thead><tbody></tbody></table></div>
-    <!-- Removed trend chart here -->
+    <div class="table-wrap"><table id="statsTable"><thead>
+      <tr><th>排行榜</th><th>用户</th><th>本周分数</th></tr>
+    </thead><tbody>
+      <!-- Example Data -->
+      <tr>
+        <td>TRADING</td>
+        <td>100</td>
+        <td>5000</td>
+      </tr>
+      <tr>
+        <td>STAKING</td>
+        <td>200</td>
+        <td>10000</td>
+      </tr>
+      <tr>
+        <td>DISCORD</td>
+        <td>150</td>
+        <td>8000</td>
+      </tr>
+      <tr>
+        <td>X.COM</td>
+        <td>120</td>
+        <td>6000</td>
+      </tr>
+    </tbody></table></div>
   </div>
 
   <div style="text-align:center;margin-top:18px;font-size:15px">
@@ -127,7 +150,8 @@ async function loadBoard(name){
   curTxt.trim().split('\n').forEach(l=>{
     const m=l.match(lineRe);if(!m)return;
     const [_,rank,addr,curS]=m;const cur=+curS;const prev=preMap.get(addr.toLowerCase())??null;
-    const diff=prev!==null?cur-prev:null;const pct=prev?((diff/prev)*100).toFixed(2):null;
+    const diff=prev!==null?cur-prev:cur;  // If no previous score, treat "变化" as "本周分数"
+    const pct=prev?((diff/prev)*100).toFixed(2):null;
     const tr=document.createElement('tr');
     tr.insertCell().textContent=rank;
     const tdAddr=tr.insertCell();
