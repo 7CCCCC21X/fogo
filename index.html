@@ -27,23 +27,23 @@ th.sort-desc::after{content:" ▼";font-size:11px}
 tr:hover{background:rgba(0,0,0,.04)}
 .diff-pos{color:var(--pos);font-weight:bold}
 .diff-neg{color:var(--neg);font-weight:bold}
-.spark{width:60px;height:22px}
+.spark{width:60px;height:22px;display:block}
 #themeToggle{position:fixed;top:15px;right:15px;background:none;border:none;font-size:22px;cursor:pointer;color:var(--accent)}
 </style>
 </head>
 <body>
 
-<button id="themeToggle" title="切换主题">🌙</button>
+<button id="themeToggle">🌙</button>
 
 <div class="container">
   <h1>排行榜汇总</h1>
 
   <div class="tab-nav">
     <button data-target="trading" class="tab-btn active">TRADING</button>
-    <button data-target="staking"  class="tab-btn">STAKING</button>
-    <button data-target="discord"  class="tab-btn">DISCORD</button>
-    <button data-target="xcom"     class="tab-btn">X.COM</button>
-    <button data-target="stats"    class="tab-btn">汇总</button>
+    <button data-target="staking" class="tab-btn">STAKING</button>
+    <button data-target="discord" class="tab-btn">DISCORD</button>
+    <button data-target="xcom" class="tab-btn">X.COM</button>
+    <button data-target="stats" class="tab-btn">汇总</button>
   </div>
 
   <div class="toolbar" id="toolbar">
@@ -52,37 +52,25 @@ tr:hover{background:rgba(0,0,0,.04)}
     <button id="exportBtn">导出 CSV</button>
   </div>
 
-  <!-- 四榜单 -->
-  <div id="trading" class="section">
-    <h2>TRADING</h2>
-    <div class="table-wrap"><table id="tradingTable"><thead><tr>
-      <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
-    </tr></thead><tbody></tbody></table></div>
-  </div>
+  <!-- 四榜单（结构不变） -->
+  <div id="trading"><h2>TRADING</h2><div class="table-wrap"><table id="tradingTable"><thead><tr>
+    <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
+  </tr></thead><tbody></tbody></table></div></div>
 
-  <div id="staking" class="section" style="display:none">
-    <h2>STAKING</h2>
-    <div class="table-wrap"><table id="stakingTable"><thead><tr>
-      <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
-    </tr></thead><tbody></tbody></table></div>
-  </div>
+  <div id="staking" style="display:none"><h2>STAKING</h2><div class="table-wrap"><table id="stakingTable"><thead><tr>
+    <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
+  </tr></thead><tbody></tbody></table></div></div>
 
-  <div id="discord" class="section" style="display:none">
-    <h2>DISCORD</h2>
-    <div class="table-wrap"><table id="discordTable"><thead><tr>
-      <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
-    </tr></thead><tbody></tbody></table></div>
-  </div>
+  <div id="discord" style="display:none"><h2>DISCORD</h2><div class="table-wrap"><table id="discordTable"><thead><tr>
+    <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
+  </tr></thead><tbody></tbody></table></div></div>
 
-  <div id="xcom" class="section" style="display:none">
-    <h2>X.COM</h2>
-    <div class="table-wrap"><table id="xcomTable"><thead><tr>
-      <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
-    </tr></thead><tbody></tbody></table></div>
-  </div>
+  <div id="xcom" style="display:none"><h2>X.COM</h2><div class="table-wrap"><table id="xcomTable"><thead><tr>
+    <th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th><th>%</th>
+  </tr></thead><tbody></tbody></table></div></div>
 
   <!-- 汇总 -->
-  <div id="stats" class="section" style="display:none">
+  <div id="stats" style="display:none">
     <h2>汇总数据</h2>
     <p style="text-align:center;font-size:14px;color:#888">用户 = 地址数；总分 = 本周分</p>
     <div class="table-wrap"><table id="statsTable"><thead></thead><tbody></tbody></table></div>
@@ -95,6 +83,7 @@ tr:hover{background:rgba(0,0,0,.04)}
 </div>
 
 <script>
+/* === 配置 === */
 const boards={
   trading:['data/trading.txt','data/trading-week1.txt','tradingTable','trading'],
   staking:['data/staking.txt','data/staking-week1.txt','stakingTable','staking'],
@@ -103,21 +92,20 @@ const boards={
 };
 const lineRe=/排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
 const nf=n=>Number(n).toLocaleString('en-US');
+const safe=n=>isNaN(n)?0:n;
 const loaded={}; let trendChart=null;
 
-/* 主题 */
-themeToggle.onclick=()=>{
-  const dark=document.documentElement.getAttribute('data-theme')==='dark';
+/* === 主题 === */
+themeToggle.onclick=()=>{const dark=document.documentElement.getAttribute('data-theme')==='dark';
   document.documentElement.setAttribute('data-theme',dark?'':'dark');
-  themeToggle.textContent=dark?'🌙':'☀️';
-};
+  themeToggle.textContent=dark?'🌙':'☀️';};
 
-/* 加载榜单 */
+/* === 加载榜单 === */
 async function loadBoard(name){
   if(loaded[name]) return;
   const [curP,preP,tableId,type]=boards[name];
   const [curRes,preRes]=await Promise.all([fetch(curP),fetch(preP)]);
-  if(!curRes.ok) return;
+  if(!curRes.ok){console.error(curP,'加载失败');return;}
   const curTxt=await curRes.text();
   const preTxt=preRes.ok?await preRes.text():'';
   const preMap=new Map();
@@ -126,95 +114,82 @@ async function loadBoard(name){
   const frag=document.createDocumentFragment();
   curTxt.trim().split('\n').forEach(l=>{
     const m=l.match(lineRe);if(!m)return;
-    const [_,rank,addr,curS]=m;const cur=+curS;const prev=preMap.get(addr.toLowerCase())??null;
-    const diff=prev!==null?cur-prev:null;const pct=prev?((diff/prev)*100).toFixed(2):null;
+    const [_,rank,addr,curS]=m;const cur=+curS;const prev=preMap.get(addr.toLowerCase())??0;
+    const diff=cur-prev;const pct=prev?((diff/prev)*100).toFixed(2):0;
     const tr=document.createElement('tr');
     tr.insertCell().textContent=rank;
     const tdAddr=tr.insertCell();
-    if(type==='discord'){tdAddr.textContent=addr;}else{
-      const a=document.createElement('a');a.textContent=addr;a.target='_blank';
+    if(type==='discord')tdAddr.textContent=addr;
+    else{const a=document.createElement('a');a.textContent=addr;a.target='_blank';
       if(type==='trading')a.href='https://debank.com/profile/'+addr;
       if(type==='staking')a.href='https://app.getnimbus.io/?tab=token&type=SOL&chain=ALL&address='+addr;
-      if(type==='xcom')   a.href='https://x.com/'+addr;
-      tdAddr.appendChild(a);
-    }
+      if(type==='xcom')a.href='https://x.com/'+addr;
+      tdAddr.appendChild(a);}
     tr.insertCell().textContent=nf(cur);
-    tr.insertCell().textContent=prev!==null?nf(prev):'—';
-    const tdDiff=tr.insertCell();
-    tdDiff.textContent=diff===null?'—':`${diff>0?'▲':'▼'} ${nf(Math.abs(diff))}`;
-    tdDiff.className=diff>0?'diff-pos':diff<0?'diff-neg':'';
-    tr.insertCell().textContent=pct!==null?`${diff>0?'+':''}${pct}%`:'—';
+    tr.insertCell().textContent=nf(prev);
+    const tdD=tr.insertCell();tdD.textContent=`${diff>0?'▲':'▼'} ${nf(Math.abs(diff))}`;
+    tdD.className=diff>0?'diff-pos':diff<0?'diff-neg':'';
+    tr.insertCell().textContent=`${diff>0?'+':''}${pct}%`;
     frag.appendChild(tr);
   });
-  tbody.appendChild(frag);
-  sorter(tableId,1);
-  loaded[name]=true;
+  tbody.appendChild(frag); sorter(tableId,1); loaded[name]=true;
 }
 
-/* 排序 */
+/* === 排序 === */
 function sorter(tableId,skip=0){
   const ths=[...document.querySelector(`#${tableId} thead`).rows[0].cells];
   ths.forEach((th,i)=>{if(i<=skip)return;
-    th.onclick=()=>{
-      const dir=th.classList.contains('sort-asc')?'desc':'asc';
+    th.onclick=()=>{const asc=!th.classList.contains('sort-asc');
       ths.forEach(t=>t.classList.remove('sort-asc','sort-desc'));
-      th.classList.add(dir==='asc'?'sort-asc':'sort-desc');
+      th.classList.add(asc?'sort-asc':'sort-desc');
       const rows=[...document.querySelector(`#${tableId} tbody`).rows];
       rows.sort((a,b)=>{
         const va=+a.cells[i].textContent.replace(/[^0-9.-]/g,''),vb=+b.cells[i].textContent.replace(/[^0-9.-]/g,'');
-        return dir==='asc'?va-vb:vb-va;
-      });
-      const frag=document.createDocumentFragment();rows.forEach(r=>frag.appendChild(r));
-      document.querySelector(`#${tableId} tbody`).appendChild(frag);
-    };
-  });
+        return asc?va-vb:vb-va;});
+      const f=document.createDocumentFragment();rows.forEach(r=>f.appendChild(r));
+      document.querySelector(`#${tableId} tbody`).appendChild(f);};});
 }
 
-/* 汇总 */
+/* === 汇总 === */
 function buildStats(){
   const sb=document.querySelector('#statsTable tbody');const sh=document.querySelector('#statsTable thead');
-  sh.innerHTML='<tr><th>排行榜</th><th>用户</th><th>本周</th><th>上周</th><th>变化</th><th>%</th><th>趋势</th></tr>';sb.innerHTML='';
+  sb.innerHTML='';sh.innerHTML='<tr><th>排行榜</th><th>用户</th><th>本周</th><th>上周</th><th>变化</th><th>%</th><th>趋势</th></tr>';
   let totCur=0,totPrev=0,totUsers=0;const rows=[];
   for(const [name,[,,tid]] of Object.entries(boards)){
     if(!loaded[name])continue;
     const trs=[...document.querySelector(`#${tid} tbody`).rows];if(!trs.length)continue;
     const users=trs.length;
-    const cur=trs.reduce((s,r)=>s+ +r.cells[2].textContent.replace(/,/g,''),0);
-    const prev=trs.reduce((s,r)=>s+ +r.cells[3].textContent.replace(/,/g,''),0);
+    const cur=trs.reduce((s,r)=>s+safe(+r.cells[2].textContent.replace(/,/g,'')),0);
+    const prev=trs.reduce((s,r)=>s+safe(+r.cells[3].textContent.replace(/,/g,'')),0);
     const diff=cur-prev;const pct=prev?((diff/prev)*100).toFixed(2):0;
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td>${name.toUpperCase()}</td>
-      <td>${nf(users)}</td>
-      <td>${nf(cur)}</td>
-      <td>${nf(prev)}</td>
+    const tr=document.createElement('tr');tr.innerHTML=`
+      <td>${name.toUpperCase()}</td><td>${nf(users)}</td><td>${nf(cur)}</td><td>${nf(prev)}</td>
       <td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${nf(diff)}</td>
       <td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${diff>0?'+':''}${pct}%</td>
-      <td><canvas class="spark"></canvas></td>`;
+      <td><canvas class="spark" width="60" height="22"></canvas></td>`;
     sb.appendChild(tr);
-    const c=tr.querySelector('canvas');
-    new Chart(c,{type:'line',data:{labels:['上周','本周'],datasets:[{data:[prev,cur]}]},
+    new Chart(tr.querySelector('canvas'),{type:'line',
+      data:{labels:['上周','本周'],datasets:[{data:[prev,cur]}]},
       options:{plugins:{legend:{display:false}},elements:{line:{tension:.3,borderWidth:1},point:{radius:0}},
-      scales:{x:{display:false},y:{display:false}}}});
+               scales:{x:{display:false},y:{display:false}},maintainAspectRatio:false}});
     totCur+=cur;totPrev+=prev;totUsers+=users;rows.push({name,cur,prev});
   }
-  const d=totCur-totPrev;pctTot=totPrev?((d/totPrev)*100).toFixed(2):0;
-  const trT=document.createElement('tr');trT.style.fontWeight='bold';
-  trT.innerHTML=`
-    <td>总计</td><td>${nf(totUsers)}</td><td>${nf(totCur)}</td><td>${nf(totPrev)}</td>
-    <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${nf(d)}</td>
-    <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${d>0?'+':''}${pctTot}%</td><td></td>`;
-  sb.appendChild(trT);
+  const d=totCur-totPrev;const pctTot=totPrev?((d/totPrev)*100).toFixed(2):0;
+  sb.insertAdjacentHTML('beforeend',`
+    <tr style="font-weight:bold">
+      <td>总计</td><td>${nf(totUsers)}</td><td>${nf(totCur)}</td><td>${nf(totPrev)}</td>
+      <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${nf(d)}</td>
+      <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${d>0?'+':''}${pctTot}%</td><td></td></tr>`);
   sorter('statsTable');
   const ctx=document.getElementById('trendChart').getContext('2d');
   if(trendChart)trendChart.destroy();
   trendChart=new Chart(ctx,{type:'line',
-    data:{labels:rows.map(r=>r.name.toUpperCase()),datasets:[{label:'本周',data:rows.map(r=>r.cur)},
-      {label:'上周',data:rows.map(r=>r.prev)}]},
-    options:{responsive:true,plugins:{legend:{display:true}},elements:{line:{tension:.3},point:{radius:3}}}});
+    data:{labels:rows.map(r=>r.name.toUpperCase()),
+      datasets:[{label:'本周',data:rows.map(r=>r.cur)},{label:'上周',data:rows.map(r=>r.prev)}]},
+    options:{responsive:true,plugins:{legend:{display:true}},elements:{line:{tension:.3},point:{radius:3}}});
 }
 
-/* 搜索 / 导出 */
+/* === 搜索 / 导出 === */
 queryBtn.onclick=()=>{
   const term=queryInput.value.trim().toLowerCase();
   const sec=[...document.querySelectorAll('.section')].find(s=>s.style.display!=='none'&&s.id!=='stats');
@@ -233,19 +208,18 @@ exportBtn.onclick=()=>{
   a.download=`${sec.id}.csv`;a.click();URL.revokeObjectURL(a.href);
 };
 
-/* Tab */
+/* === Tab === */
 document.querySelectorAll('.tab-btn').forEach(btn=>{
-  btn.onclick=()=>{
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  btn.onclick=()=>{document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
     const t=btn.dataset.target;
     document.querySelectorAll('.section').forEach(s=>s.style.display='none');
     document.getElementById(t).style.display='block';
     toolbar.style.display=t==='stats'?'none':'block';
-    if(t==='stats') buildStats();
-  };
+    if(t==='stats') buildStats();};
 });
 
-/* 首屏：并行加载四榜单，然后生成汇总 */
+/* === 首屏：并行加载四榜单，再生成汇总 === */
 Promise.all(Object.keys(boards).map(loadBoard)).then(buildStats);
 </script>
 </body>
