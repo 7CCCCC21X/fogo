@@ -40,6 +40,7 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
+      overflow-x: auto;
     }
     th, td {
       border: 1px solid #ccc;
@@ -74,6 +75,7 @@
     .trend-row {
       display: none;
       background-color: #f9f9f9;
+      transition: all 0.3s ease;
     }
     .trend-cell {
       padding: 16px;
@@ -82,6 +84,18 @@
       margin-top: 30px;
       text-align: center;
       font-size: 14px;
+    }
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      th {
+        font-size: 12px;
+      }
+      td {
+        font-size: 12px;
+        padding: 6px;
+      }
     }
   </style>
 </head>
@@ -138,105 +152,11 @@
       用户数量 = 该排行榜参与地址数； 总分 = 该排行榜所有地址分数之和
     </p>
     <div id="statsContent"></div>
+    <canvas id="summaryChart" height="200"></canvas>
   </section>
 
   <div id="authorLink">
     作者：<a href="https://x.com/0xXIAOc" target="_blank">小C</a>
   </div>
-
-  <script>
-    const categories = ['trading', 'staking', 'discord', 'xcom'];
-    const lineRegex = /排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
-
-    async function loadData(type, week = '') {
-      try {
-        const res = await fetch(`data/${type}${week ? '-' + week : ''}.txt`);
-        const text = await res.text();
-        const data = {};
-        text.trim().split('\n').forEach(line => {
-          const match = line.match(lineRegex);
-          if (match) data[match[2].toLowerCase()] = parseFloat(match[3]);
-        });
-        return data;
-      } catch {
-        return {};
-      }
-    }
-
-    async function loadLeaderboard(type) {
-      const thisWeek = await loadData(type);
-      const lastWeek = await loadData(type, 'week1');
-      const tbody = document.querySelector(`#${type}Table tbody`);
-      tbody.innerHTML = '';
-      let rank = 1;
-      Object.entries(thisWeek).forEach(([addr, now]) => {
-        const prev = lastWeek[addr] || 0;
-        const diff = now - prev;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${rank++}</td><td>${addr}</td><td>${prev}</td><td>${now}</td><td class="diff-cell" style="color:${diff>=0?'green':'red'};cursor:pointer">${diff>=0?'+':''}${diff}</td>`;
-
-        const trendRow = document.createElement('tr');
-        trendRow.className = 'trend-row';
-        const trendCell = document.createElement('td');
-        trendCell.colSpan = 5;
-        trendCell.className = 'trend-cell';
-        trendCell.innerHTML = `<canvas id="trend-${type}-${addr.slice(2, 10)}" height="150"></canvas>`;
-        trendRow.appendChild(trendCell);
-        tbody.appendChild(tr);
-        tbody.appendChild(trendRow);
-
-        tr.querySelector('.diff-cell').addEventListener('click', () => {
-          trendRow.style.display = trendRow.style.display === 'table-row' ? 'none' : 'table-row';
-          drawTrendChart(addr, type, `trend-${type}-${addr.slice(2, 10)}`);
-        });
-      });
-    }
-
-    async function drawTrendChart(address, category, canvasId) {
-      const weeks = ['week5', 'week4', 'week3', 'week2', 'week1'];
-      const labels = ['W5', 'W4', 'W3', 'W2', 'W1', '本周'];
-      const data = [];
-      for (let w of weeks) {
-        const d = await loadData(category, w);
-        data.push(d[address.toLowerCase()] || 0);
-      }
-      const now = await loadData(category);
-      data.push(now[address.toLowerCase()] || 0);
-      const ctx = document.getElementById(canvasId)?.getContext('2d');
-      if (ctx) new Chart(ctx, {
-        type: 'line',
-        data: { labels, datasets: [{ label: '积分趋势', data, borderWidth: 2, fill: false }] },
-        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-      });
-    }
-
-    function filterCurrentTable() {
-      const input = document.getElementById('queryInput').value.trim().toLowerCase().split('\n').filter(Boolean);
-      const section = Array.from(document.querySelectorAll('.leaderboard-section')).find(s => s.style.display !== 'none');
-      const rows = section?.querySelectorAll('tbody tr');
-      if (!rows) return;
-      for (let i = 0; i < rows.length; i += 2) {
-        const main = rows[i], extra = rows[i + 1];
-        const addr = main.children[1].textContent.toLowerCase();
-        const show = input.length === 0 || input.includes(addr);
-        main.style.display = extra.style.display = show ? '' : 'none';
-      }
-    }
-
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.onclick = () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const id = btn.dataset.target;
-        document.querySelectorAll('.leaderboard-section').forEach(sec => sec.style.display = 'none');
-        document.getElementById(id).style.display = 'block';
-        if (categories.includes(id.replace('Section', ''))) loadLeaderboard(id.replace('Section', ''));
-      }
-    });
-
-    // 默认显示 trading
-    document.getElementById('tradingSection').style.display = 'block';
-    loadLeaderboard('trading');
-  </script>
 </body>
 </html>
