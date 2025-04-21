@@ -1,160 +1,285 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>排行榜汇总</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background-color: #fafafa;
-    }
-    h1, h2 {
-      text-align: center;
-      color: #333;
-    }
-    .tab-nav {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .tab-nav button {
-      padding: 10px 20px;
-      margin: 0 5px;
-      border: none;
-      border-radius: 4px;
-      font-size: 14px;
-      background-color: #f5f5f5;
-      cursor: pointer;
-    }
-    .tab-nav button.active {
-      background-color: #0066cc;
-      color: white;
-    }
-    .leaderboard-section {
-      display: none;
-      margin-top: 20px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      overflow-x: auto;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-      font-size: 14px;
-    }
-    th {
-      background-color: #eee;
-    }
-    .search-box {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .search-box textarea {
-      width: 500px;
-      height: 200px;
-      padding: 8px;
-      font-size: 14px;
-      resize: both;
-    }
-    .search-box button {
-      padding: 8px 16px;
-      font-size: 14px;
-      margin-left: 5px;
-      cursor: pointer;
-    }
-    .trend-row {
-      display: none;
-      background-color: #f9f9f9;
-      transition: all 0.3s ease;
-    }
-    .trend-cell {
-      padding: 16px;
-    }
-    #authorLink {
-      margin-top: 30px;
-      text-align: center;
-      font-size: 14px;
-    }
-    @media (max-width: 768px) {
-      table, thead, tbody, th, td, tr {
-        display: block;
-      }
-      th {
-        font-size: 12px;
-      }
-      td {
-        font-size: 12px;
-        padding: 6px;
-      }
-    }
+    /* ——— 布局 & 主题 ——— */
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#fafafa;color:#333;}
+    .container{max-width:1200px;margin:0 auto;padding:20px;}
+    h1,h2{text-align:center;color:#333}
+
+    /* ——— 选项卡 ——— */
+    .tab-nav{text-align:center;margin-bottom:20px}
+    .tab-nav button{padding:10px 20px;margin:0 5px;border:none;border-radius:4px;background:#f5f5f5;cursor:pointer;font-size:14px}
+    .tab-nav button.active{background:#0066cc;color:#fff}
+
+    /* ——— 查询框 ——— */
+    #searchBox{margin-bottom:20px;text-align:center}
+    #queryInput{width:500px;height:200px;padding:8px;font-size:14px;resize:both}
+    #searchBox button{padding:8px 16px;font-size:14px;margin-left:5px;cursor:pointer}
+
+    /* ——— 表格 ——— */
+    table{width:100%;border-collapse:collapse;margin-bottom:30px}
+    th,td{border:1px solid #ccc;padding:8px;text-align:center;font-size:14px}
+    th{background:#f5f5f5}
+    .no-data td{color:#999;font-style:italic}
+
+    /* ——— 汇总区域 ——— */
+    .leaderboard-section{display:none}
+    #statsSection{margin-top:30px;font-weight:bold;font-size:16px}
+    #statsSection table{margin:20px 0}
+    #statsSection th{background:#eee}
+
+    /* ——— diff 颜色 ——— */
+    .diff-pos{color:#28a745;font-weight:bold}
+    .diff-neg{color:#e55353;font-weight:bold}
+
+    /* ——— 作者链接 ——— */
+    #authorLink{text-align:center;margin-top:20px;font-size:15px}
   </style>
 </head>
 <body>
+<div class="container">
   <h1>排行榜汇总</h1>
+
+  <!-- tabs -->
   <div class="tab-nav">
-    <button class="tab-btn active" data-target="tradingSection">TRADING</button>
-    <button class="tab-btn" data-target="stakingSection">STAKING</button>
-    <button class="tab-btn" data-target="discordSection">DISCORD</button>
-    <button class="tab-btn" data-target="xcomSection">X.COM</button>
-    <button class="tab-btn" data-target="statsSection">汇总</button>
+    <button data-target="tradingSection" class="tab-btn active">TRADING</button>
+    <button data-target="stakingSection" class="tab-btn">STAKING</button>
+    <button data-target="discordSection" class="tab-btn">DISCORD</button>
+    <button data-target="xcomSection" class="tab-btn">X.COM</button>
+    <button data-target="statsSection" class="tab-btn">汇总</button>
   </div>
 
-  <div class="search-box" id="searchBox">
+  <!-- search -->
+  <div id="searchBox">
     <textarea id="queryInput" placeholder="每行输入一个地址进行查询..."></textarea>
     <button onclick="filterCurrentTable()">查询（支持批量地址）</button>
   </div>
 
+  <!-- four leaderboards -->
   <section id="tradingSection" class="leaderboard-section">
-    <h2>TRADING 排行榜</h2>
+    <h2>TRADING</h2>
     <table id="tradingTable">
-      <thead><tr><th>排名</th><th>地址</th><th>上周</th><th>本周</th><th>变化</th></tr></thead>
+      <thead><tr><th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th></tr></thead>
       <tbody></tbody>
     </table>
   </section>
 
   <section id="stakingSection" class="leaderboard-section">
-    <h2>STAKING 排行榜</h2>
+    <h2>STAKING</h2>
     <table id="stakingTable">
-      <thead><tr><th>排名</th><th>地址</th><th>上周</th><th>本周</th><th>变化</th></tr></thead>
+      <thead><tr><th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th></tr></thead>
       <tbody></tbody>
     </table>
   </section>
 
   <section id="discordSection" class="leaderboard-section">
-    <h2>DISCORD 排行榜</h2>
+    <h2>DISCORD</h2>
     <table id="discordTable">
-      <thead><tr><th>排名</th><th>地址</th><th>上周</th><th>本周</th><th>变化</th></tr></thead>
+      <thead><tr><th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th></tr></thead>
       <tbody></tbody>
     </table>
   </section>
 
   <section id="xcomSection" class="leaderboard-section">
-    <h2>X.COM 排行榜</h2>
+    <h2>X.COM</h2>
     <table id="xcomTable">
-      <thead><tr><th>排名</th><th>地址</th><th>上周</th><th>本周</th><th>变化</th></tr></thead>
+      <thead><tr><th>排名</th><th>地址</th><th>本周分数</th><th>上周分数</th><th>变化</th></tr></thead>
       <tbody></tbody>
     </table>
   </section>
 
+  <!-- stats -->
   <section id="statsSection" class="leaderboard-section">
     <h2>汇总数据</h2>
-    <p style="text-align:center; font-size:14px; color:#555;">
-      用户数量 = 该排行榜参与地址数； 总分 = 该排行榜所有地址分数之和
+    <p style="text-align:center;font-size:14px;color:#555;">
+      用户数量 = 该排行榜参与地址数； 总分 = 本周分数总和
     </p>
     <div id="statsContent"></div>
-    <canvas id="summaryChart" height="200"></canvas>
   </section>
 
-  <div id="authorLink">
-    作者：<a href="https://x.com/0xXIAOc" target="_blank">小C</a>
-  </div>
+  <div id="authorLink">作者：<a href="https://x.com/0xXIAOc" target="_blank">小C</a></div>
+</div>
 
-  <script src="/scripts/leaderboard.js"></script>
+<script>
+/* ---------- 工具 ---------- */
+const lineRegex = /排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
+
+/**
+ * 解析文本为 { address: score } Map
+ */
+function parseFile(text){
+  const map=new Map();
+  text.trim().split('\n').forEach(l=>{
+    const m=l.match(lineRegex);
+    if(m){ map.set(m[2].toLowerCase(), parseFloat(m[3])); }
+  });
+  return map;
+}
+
+/**
+ * 加载并渲染榜单
+ * @param {string} curPath  本周数据文件
+ * @param {string} prevPath 上周数据文件
+ * @param {string} tableId  要填充的表格 id
+ * @param {string} type     用于地址外链
+ */
+async function loadLeaderboard(curPath, prevPath, tableId, type){
+  try{
+    /* —— 获取两份文件 —— */
+    const [curRes,prevRes] = await Promise.all([ fetch(curPath), fetch(prevPath) ]);
+    if(!curRes.ok) throw new Error('无法加载 '+curPath);
+    const curText = await curRes.text();
+    const prevText = prevRes.ok ? await prevRes.text() : '';
+    const prevMap  = parseFile(prevText);
+    const tbody=document.getElementById(tableId).querySelector('tbody');
+    tbody.innerHTML='';
+
+    const lines = curText.trim().split('\n');
+    if(lines.length===0 || (lines.length===1 && lines[0]==='')){
+      tbody.innerHTML='<tr class="no-data"><td colspan="5">暂无数据</td></tr>';
+      updateSummary(); return;
+    }
+
+    lines.forEach(l=>{
+      const m=l.match(lineRegex);
+      if(!m) return;
+      const rank=m[1], addr=m[2], curScore=parseFloat(m[3]);
+      const addrLower=addr.toLowerCase();
+      const lastScore = prevMap.has(addrLower) ? prevMap.get(addrLower) : null;
+      const diff      = lastScore!==null ? (curScore - lastScore) : null;
+
+      const tr=document.createElement('tr');
+
+      /* 排名 */
+      const tdRank=document.createElement('td'); tdRank.textContent=rank; tr.appendChild(tdRank);
+
+      /* 地址 */
+      const tdAddr=document.createElement('td');
+      if(type==='discord'){ tdAddr.textContent=addr; }
+      else{
+        const a=document.createElement('a'); a.textContent=addr; a.target='_blank';
+        if(type==='trading'){ a.href='https://debank.com/profile/'+addr; }
+        else if(type==='staking'){ a.href='https://app.getnimbus.io/?tab=token&type=SOL&chain=ALL&address='+addr; }
+        else if(type==='xcom'){ a.href='https://x.com/'+addr; }
+        else{ a.href='#'; }
+        tdAddr.appendChild(a);
+      }
+      tr.appendChild(tdAddr);
+
+      /* 本周分数 */
+      const tdCur=document.createElement('td'); tdCur.textContent=curScore; tr.appendChild(tdCur);
+
+      /* 上周分数 */
+      const tdPrev=document.createElement('td');
+      tdPrev.textContent = lastScore!==null ? lastScore : '—';
+      tr.appendChild(tdPrev);
+
+      /* 变化 */
+      const tdDiff=document.createElement('td');
+      if(diff===null){ tdDiff.textContent='—'; }
+      else{
+        const arrow = diff>0 ? '▲ ' : diff<0 ? '▼ ' : '';
+        const val   = diff>0 ? diff : diff<0 ? Math.abs(diff) : diff;
+        tdDiff.textContent = arrow + val;
+        tdDiff.className   = diff>0 ? 'diff-pos' : diff<0 ? 'diff-neg' : '';
+      }
+      tr.appendChild(tdDiff);
+
+      tbody.appendChild(tr);
+    });
+    updateSummary();
+  }catch(e){
+    console.error(e);
+    const tbody=document.getElementById(tableId).querySelector('tbody');
+    tbody.innerHTML='<tr class="no-data"><td colspan="5">加载失败，请稍后重试</td></tr>';
+  }
+}
+
+/* ---------- 批量过滤 ---------- */
+function filterCurrentTable(){
+  const raw=document.getElementById('queryInput').value.trim().toLowerCase();
+  const curSection=[...document.querySelectorAll('.leaderboard-section')]
+        .find(s=>s.style.display!=='none' && s.id!=='statsSection');
+  if(!curSection) return;
+
+  const tbody=curSection.querySelector('tbody');
+  if(!raw){ resetTable(curSection.id); return; }
+  const q=raw.split('\n').map(s=>s.trim()).filter(Boolean);
+  let matched=0;
+  [...tbody.rows].forEach(r=>{
+    const ok=q.some(w=>r.textContent.toLowerCase().includes(w));
+    r.style.display=ok?'':'none'; if(ok) matched++;
+  });
+  let noRow=tbody.querySelector('.no-data');
+  if(matched===0){
+    if(!noRow){
+      noRow=document.createElement('tr'); noRow.className='no-data';
+      const td=document.createElement('td'); td.colSpan=5; td.textContent='无';
+      noRow.appendChild(td); tbody.appendChild(noRow);
+    }
+  }else if(noRow){ noRow.remove(); }
+}
+
+function resetTable(secId){
+  const tbody=document.getElementById(secId).querySelector('tbody');
+  [...tbody.rows].forEach(r=>r.style.display='');
+  const no=tbody.querySelector('.no-data'); if(no) no.remove();
+}
+
+/* ---------- 汇总 ---------- */
+function updateSummary(){
+  const tables=[
+    {id:'tradingTable',name:'TRADING'},
+    {id:'stakingTable',name:'STAKING'},
+    {id:'discordTable',name:'DISCORD'},
+    {id:'xcomTable',   name:'X.COM'}
+  ];
+  let totalUsers=0,totalScore=0;
+  let html='<table><thead><tr><th>排行榜</th><th>用户数量</th><th>总分</th></tr></thead><tbody>';
+
+  tables.forEach(t=>{
+    const rows=[...document.getElementById(t.id).querySelector('tbody').rows]
+                .filter(r=>!r.classList.contains('no-data'));
+    const users=rows.length;
+    const sum  =rows.reduce((s,r)=>s+(parseFloat(r.cells[2].textContent)||0),0);
+    html+=`<tr><td>${t.name}</td><td>${users}</td><td>${sum}</td></tr>`;
+    totalUsers+=users; totalScore+=sum;
+  });
+  html+=`<tr style="font-weight:bold;"><td>总计</td><td>${totalUsers}</td><td>${totalScore}</td></tr>`;
+  html+='</tbody></table>';
+  document.getElementById('statsContent').innerHTML=html;
+}
+
+/* ---------- 选项卡 ---------- */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+
+    document.querySelectorAll('.leaderboard-section').forEach(s=>s.style.display='none');
+    const target=btn.getAttribute('data-target');
+    document.getElementById(target).style.display='block';
+
+    if(target==='statsSection'){ document.getElementById('searchBox').style.display='none'; }
+    else{
+      document.getElementById('searchBox').style.display='block';
+      document.getElementById('queryInput').value='';
+      resetTable(target);
+    }
+  });
+});
+
+/* ---------- 初始显示 ---------- */
+document.getElementById('tradingSection').style.display='block';
+
+/* ---------- 加载 4 份榜单 ---------- */
+loadLeaderboard('data/trading.txt','data/trading-week1.txt','tradingTable','trading');
+loadLeaderboard('data/staking.txt','data/staking-week1.txt','stakingTable','staking');
+loadLeaderboard('data/discord.txt','data/discord-week1.txt','discordTable','discord');
+loadLeaderboard('data/xcom.txt','data/xcom-week1.txt','xcomTable','xcom');
+</script>
 </body>
 </html>
