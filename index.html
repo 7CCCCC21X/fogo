@@ -1,419 +1,228 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>排行榜汇总</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* 页面整体容器样式 */
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-    }
     body {
       font-family: Arial, sans-serif;
       margin: 0;
-      padding: 0;
-      background-color: #fafafa;
+      padding: 20px;
+      background: #fafafa;
     }
     h1, h2 {
-      color: #333;
       text-align: center;
+      color: #333;
     }
     .tab-nav {
-      margin-bottom: 20px;
       text-align: center;
+      margin-bottom: 20px;
     }
     .tab-nav button {
-      padding: 10px 20px;
-      margin: 0 5px;
-      border: none;
-      background-color: #f5f5f5;
-      cursor: pointer;
-      border-radius: 4px;
+      padding: 8px 16px;
+      margin: 0 4px;
       font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: #f0f0f0;
     }
     .tab-nav button.active {
-      background-color: #0066cc;
+      background-color: #007bff;
       color: white;
     }
-    .search-box {
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    /* 修改后的文本框，宽度设置为500px，高度设置为200px */
-    .search-box textarea {
-      width: 500px;
-      height: 200px;
-      padding: 8px;
-      font-size: 14px;
-      resize: both; /* 可拖拽调整大小 */
-    }
-    .search-box button {
-      padding: 8px 16px;
-      font-size: 14px;
-      margin-left: 5px;
-      cursor: pointer;
+    .leaderboard-section {
+      display: none;
+      margin-top: 20px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 30px;
+      margin-top: 10px;
     }
     th, td {
       border: 1px solid #ccc;
       padding: 8px;
       text-align: center;
-      font-size: 14px;
     }
     th {
-      background-color: #f5f5f5;
+      background: #eee;
     }
-    .no-data td {
-      color: #999;
-      font-style: italic;
-    }
-    /* 默认隐藏所有排行榜 */
-    .leaderboard-section {
-      display: none;
-    }
-    /* 汇总区域样式 */
-    #statsSection {
-      margin-top: 30px;
-      font-weight: bold;
-      font-size: 16px;
-    }
-    #statsSection table {
-      width: 100%;
-      border-collapse: collapse;
+    #searchBox {
+      text-align: center;
       margin: 20px 0;
     }
-    #statsSection th, #statsSection td {
-      border: 1px solid #ccc;
-      padding: 6px 12px;
-      text-align: center;
+    #searchBox textarea {
+      width: 500px;
+      height: 120px;
+      padding: 8px;
+      font-size: 14px;
     }
-    #statsSection th {
-      background-color: #eee;
+    #searchBox button {
+      margin-left: 8px;
+      padding: 8px 16px;
+      font-size: 14px;
     }
-    /* 单独的作者链接展示 */
+    #weeklyTrendChart {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
     #authorLink {
-      margin-top: 20px;
-      font-size: 15px;
+      margin-top: 30px;
       text-align: center;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>排行榜汇总</h1>
-
-    <!-- 选项卡导航：包含四个排行榜及“汇总”按钮 -->
-    <div class="tab-nav">
-      <button data-target="tradingSection" class="tab-btn active">TRADING</button>
-      <button data-target="stakingSection" class="tab-btn">STAKING</button>
-      <button data-target="discordSection" class="tab-btn">DISCORD</button>
-      <button data-target="xcomSection" class="tab-btn">X.COM</button>
-      <button data-target="statsSection" class="tab-btn">汇总</button>
-    </div>
-
-    <!-- 批量查询区域（仅针对当前显示的排行榜），使用多行文本框 -->
-    <div class="search-box" id="searchBox">
-      <textarea id="queryInput" placeholder="每行输入一个地址进行查询..." rows="4"></textarea>
-      <button onclick="filterCurrentTable()">查询（支持批量地址）</button>
-    </div>
-
-    <!-- TRADING 排行榜 -->
-    <section id="tradingSection" class="leaderboard-section">
-      <h2>TRADING</h2>
-      <table id="tradingTable">
-        <thead>
-          <tr>
-            <th>排名</th>
-            <th>地址</th>
-            <th>分数</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- STAKING 排行榜 -->
-    <section id="stakingSection" class="leaderboard-section">
-      <h2>STAKING</h2>
-      <table id="stakingTable">
-        <thead>
-          <tr>
-            <th>排名</th>
-            <th>地址</th>
-            <th>分数</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- DISCORD 排行榜 -->
-    <section id="discordSection" class="leaderboard-section">
-      <h2>DISCORD</h2>
-      <table id="discordTable">
-        <thead>
-          <tr>
-            <th>排名</th>
-            <th>地址</th>
-            <th>分数</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- X.COM 排行榜 -->
-    <section id="xcomSection" class="leaderboard-section">
-      <h2>X.COM</h2>
-      <table id="xcomTable">
-        <thead>
-          <tr>
-            <th>排名</th>
-            <th>地址</th>
-            <th>分数</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- 汇总数据区域 -->
-    <section id="statsSection" class="leaderboard-section">
-      <h2>汇总数据</h2>
-      <p style="text-align:center; font-size:14px; color:#555;">
-        用户数量 = 该排行榜参与地址数； 总分 = 该排行榜所有地址分数之和
-      </p>
-      <div id="statsContent"></div>
-    </section>
-
-    <!-- 单独的作者链接展示 -->
-    <div id="authorLink">
-      作者：<a href="https://x.com/0xXIAOc" target="_blank">小C</a>
-    </div>
+  <h1>排行榜汇总</h1>
+  <div class="tab-nav">
+    <button class="tab-btn active" data-target="tradingSection">TRADING</button>
+    <button class="tab-btn" data-target="stakingSection">STAKING</button>
+    <button class="tab-btn" data-target="discordSection">DISCORD</button>
+    <button class="tab-btn" data-target="xcomSection">X.COM</button>
+    <button class="tab-btn" data-target="trendSection">趋势图</button>
   </div>
 
+  <div id="searchBox">
+    <textarea id="queryInput" placeholder="每行输入一个地址进行查询..."></textarea>
+    <button onclick="filterCurrentTable()">查询</button>
+  </div>
+
+  <section id="tradingSection" class="leaderboard-section">
+    <h2>TRADING 排行榜</h2>
+    <table id="tradingTable"><thead><tr><th>排名</th><th>地址</th><th>分数</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <section id="stakingSection" class="leaderboard-section">
+    <h2>STAKING 排行榜</h2>
+    <table id="stakingTable"><thead><tr><th>排名</th><th>地址</th><th>分数</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <section id="discordSection" class="leaderboard-section">
+    <h2>DISCORD 排行榜</h2>
+    <table id="discordTable"><thead><tr><th>排名</th><th>地址</th><th>分数</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <section id="xcomSection" class="leaderboard-section">
+    <h2>X.COM 排行榜</h2>
+    <table id="xcomTable"><thead><tr><th>排名</th><th>地址</th><th>分数</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <section id="trendSection" class="leaderboard-section">
+    <h2>📈 多周积分趋势图</h2>
+    <canvas id="weeklyTrendChart" height="300"></canvas>
+  </section>
+
+  <div id="authorLink">作者：<a href="https://x.com/0xXIAOc" target="_blank">小C</a></div>
+
   <script>
-    /**
-     * 数据文件格式示例：
-     * 排名: 1, 地址: 0x9ed15383940cc380faef0a75edace507cc775f22, 分数: 42000
-     */
     const lineRegex = /排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
 
-    // 使用统一函数加载并解析排行榜数据
-    async function loadLeaderboard(filePath, tableId, type) {
-      try {
-        const response = await fetch(filePath);
-        if (!response.ok) {
-          throw new Error('无法加载 ' + filePath);
+    async function loadLeaderboard(filePath, tableId) {
+      const res = await fetch(filePath);
+      const text = await res.text();
+      const tbody = document.querySelector(`#${tableId} tbody`);
+      tbody.innerHTML = '';
+      text.trim().split('\n').forEach(line => {
+        const m = line.match(lineRegex);
+        if (m) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td>`;
+          tbody.appendChild(tr);
         }
-        const text = await response.text();
-        const lines = text.trim().split('\n');
-        const tbody = document.getElementById(tableId).querySelector('tbody');
-        tbody.innerHTML = ''; // 清空现有数据
-
-        if (lines.length === 0 || (lines.length === 1 && lines[0] === "")) {
-          // 若文件为空，则显示暂无数据
-          tbody.innerHTML = '<tr class="no-data"><td colspan="3">暂无数据</td></tr>';
-          updateSummary();
-          return;
-        }
-
-        lines.forEach(line => {
-          const match = line.match(lineRegex);
-          if (match) {
-            const rank = match[1];
-            const address = match[2];
-            const score = parseFloat(match[3]);
-
-            const tr = document.createElement('tr');
-
-            // 创建排名单元格
-            const tdRank = document.createElement('td');
-            tdRank.textContent = rank;
-            tr.appendChild(tdRank);
-
-            // 创建地址单元格
-            const tdAddress = document.createElement('td');
-            if (type === 'discord') {
-              // DISCORD 直接显示文本
-              tdAddress.textContent = address;
-            } else {
-              const link = document.createElement('a');
-              link.textContent = address;
-              link.target = "_blank";
-              if (type === 'trading') {
-                link.href = 'https://debank.com/profile/' + address;
-              } else if (type === 'staking') {
-                link.href = 'https://app.getnimbus.io/?tab=token&type=SOL&chain=ALL&address=' + address;
-              } else if (type === 'xcom') {
-                link.href = 'https://x.com/' + address;
-              } else {
-                link.href = '#';
-              }
-              tdAddress.appendChild(link);
-            }
-            tr.appendChild(tdAddress);
-
-            // 创建分数字段
-            const tdScore = document.createElement('td');
-            tdScore.textContent = score;
-            tr.appendChild(tdScore);
-
-            tbody.appendChild(tr);
-          }
-        });
-        updateSummary();
-      } catch (error) {
-        console.error('Error loading leaderboard:', error);
-        const tbody = document.getElementById(tableId).querySelector('tbody');
-        tbody.innerHTML = '<tr class="no-data"><td colspan="3">加载失败，请稍后重试</td></tr>';
-      }
+      });
     }
 
-    // 分别加载4个排行榜数据
-    loadLeaderboard('data/trading.txt', 'tradingTable', 'trading');
-    loadLeaderboard('data/staking.txt', 'stakingTable', 'staking');
-    loadLeaderboard('data/discord.txt', 'discordTable', 'discord');
-    loadLeaderboard('data/xcom.txt', 'xcomTable', 'xcom');
+    function filterCurrentTable() {
+      const input = document.getElementById('queryInput').value.toLowerCase().split('\n').filter(Boolean);
+      const visibleSection = Array.from(document.querySelectorAll('.leaderboard-section')).find(s => s.style.display !== 'none' && s.id.includes('Section'));
+      if (!visibleSection) return;
+      const rows = visibleSection.querySelectorAll('tbody tr');
+      rows.forEach(row => {
+        const addr = row.children[1]?.textContent.toLowerCase();
+        row.style.display = input.length === 0 || input.includes(addr) ? '' : 'none';
+      });
+    }
 
-    // 选项卡切换功能
+    async function loadAllWeeks(category) {
+      const weeks = ['week1', 'week2', 'week3', 'week4', 'week5'];
+      const result = {};
+      for (let w of weeks) {
+        try {
+          const res = await fetch(`data/${category}-${w}.txt`);
+          const text = await res.text();
+          const map = {};
+          text.trim().split('\n').forEach(line => {
+            const m = line.match(lineRegex);
+            if (m) map[m[2].toLowerCase()] = parseFloat(m[3]);
+          });
+          result[w] = map;
+        } catch {}
+      }
+      const res = await fetch(`data/${category}.txt`);
+      const text = await res.text();
+      const map = {};
+      text.trim().split('\n').forEach(line => {
+        const m = line.match(lineRegex);
+        if (m) map[m[2].toLowerCase()] = parseFloat(m[3]);
+      });
+      result['本周'] = map;
+      return result;
+    }
+
+    async function renderTrendChart(category) {
+      const dataByWeek = await loadAllWeeks(category);
+      const weeks = Object.keys(dataByWeek);
+      const allAddrs = new Set();
+      weeks.forEach(w => Object.keys(dataByWeek[w]).forEach(a => allAddrs.add(a)));
+      const datasets = Array.from(allAddrs).map(addr => {
+        return {
+          label: addr.slice(0, 6) + '...' + addr.slice(-4),
+          data: weeks.map(w => dataByWeek[w][addr] || 0),
+          tension: 0.2,
+          fill: false,
+          borderWidth: 2
+        }
+      });
+      const ctx = document.getElementById('weeklyTrendChart').getContext('2d');
+      if (window._chart) window._chart.destroy();
+      window._chart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: weeks, datasets },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: true } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    // 初始化数据
+    loadLeaderboard('data/trading.txt', 'tradingTable');
+    loadLeaderboard('data/staking.txt', 'stakingTable');
+    loadLeaderboard('data/discord.txt', 'discordTable');
+    loadLeaderboard('data/xcom.txt', 'xcomTable');
+    renderTrendChart('trading');
+
+    // tab切换逻辑
     const tabBtns = document.querySelectorAll('.tab-btn');
     tabBtns.forEach(btn => {
-      btn.addEventListener('click', function() {
-        // 设为当前按钮为active状态
+      btn.onclick = () => {
         tabBtns.forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-
-        // 隐藏所有section
+        btn.classList.add('active');
+        const id = btn.dataset.target;
         document.querySelectorAll('.leaderboard-section').forEach(sec => sec.style.display = 'none');
-
-        // 显示选中section
-        const targetId = this.getAttribute('data-target');
-        document.getElementById(targetId).style.display = 'block';
-
-        // 根据是否是汇总页面决定是否显示搜索框
-        const searchBox = document.getElementById('searchBox');
-        if (targetId === 'statsSection') {
-          searchBox.style.display = 'none';
-        } else {
-          searchBox.style.display = 'block';
-          document.getElementById('queryInput').value = '';
-          resetTable(targetId);
+        document.getElementById(id).style.display = 'block';
+        if (id === 'trendSection') {
+          renderTrendChart(tabBtns[0].dataset.target); // 默认展示 trading
         }
-      });
+      }
     });
 
-    // 默认显示第一个排行榜
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('tradingSection').style.display = 'block';
-    });
-
-    // 修改后的批量查询函数：支持多行（批量）地址查询，只显示匹配的行
-    function filterCurrentTable() {
-      // 按行分割输入的文本，并过滤掉空行
-      const rawQueries = document.getElementById('queryInput').value.trim().toLowerCase();
-      if (!rawQueries) {
-        // 输入为空时重置当前表格显示状态
-        const currentSection = Array.from(document.querySelectorAll('.leaderboard-section'))
-                                   .find(s => s.style.display !== 'none' && s.id !== 'statsSection');
-        if (currentSection) resetTable(currentSection.id);
-        return;
-      }
-      const queries = rawQueries.split('\n').map(line => line.trim()).filter(line => line);
-
-      // 找到当前显示的排行榜区域（排除汇总区域）
-      const currentSection = Array.from(document.querySelectorAll('.leaderboard-section'))
-                                  .find(s => s.style.display !== 'none' && s.id !== 'statsSection');
-      if (!currentSection) return;
-      const tbody = currentSection.querySelector('tbody');
-      let matchedCount = 0;
-
-      // 遍历所有行，对每行文本判断是否包含任一查询关键字
-      Array.from(tbody.rows).forEach(row => {
-        const text = row.textContent.toLowerCase();
-        const matchFound = queries.some(query => text.includes(query));
-        if (matchFound) {
-          row.style.display = '';
-          matchedCount++;
-        } else {
-          row.style.display = 'none';
-        }
-      });
-
-      // 如果没有匹配结果，则显示“无”提示行
-      let noDataRow = tbody.querySelector('.no-data');
-      if (matchedCount === 0) {
-        if (!noDataRow) {
-          noDataRow = document.createElement('tr');
-          noDataRow.className = 'no-data';
-          const td = document.createElement('td');
-          td.colSpan = 3;
-          td.textContent = '无';
-          noDataRow.appendChild(td);
-          tbody.appendChild(noDataRow);
-        }
-      } else {
-        if (noDataRow) noDataRow.remove();
-      }
-    }
-
-    // 重置当前表格过滤状态
-    function resetTable(sectionId) {
-      const tbody = document.getElementById(sectionId).querySelector('tbody');
-      Array.from(tbody.rows).forEach(row => row.style.display = '');
-      const noDataRow = tbody.querySelector('.no-data');
-      if (noDataRow) noDataRow.remove();
-    }
-
-    // 更新汇总数据，统计各排行榜的用户数和总分
-    function updateSummary() {
-      const tables = [
-        { id: 'tradingTable', name: 'TRADING' },
-        { id: 'stakingTable', name: 'STAKING' },
-        { id: 'discordTable', name: 'DISCORD' },
-        { id: 'xcomTable', name: 'X.COM' }
-      ];
-      let overallUserCount = 0;
-      let overallTotalScore = 0;
-      let html = '<table border="1" cellspacing="0" cellpadding="6">' +
-                 '<thead>' +
-                 '<tr>' +
-                 '<th>排行榜</th>' +
-                 '<th>用户数量</th>' +
-                 '<th>总分</th>' +
-                 '</tr>' +
-                 '</thead>' +
-                 '<tbody>';
-      tables.forEach(t => {
-        const tbody = document.getElementById(t.id).querySelector('tbody');
-        const rows = Array.from(tbody.rows).filter(r => !r.classList.contains('no-data'));
-        const userCount = rows.length;
-        const totalScore = rows.reduce((sum, row) => {
-          const scoreText = row.cells[2]?.textContent || '0';
-          return sum + (parseFloat(scoreText) || 0);
-        }, 0);
-        html += '<tr>' +
-                '<td>' + t.name + '</td>' +
-                '<td>' + userCount + '</td>' +
-                '<td>' + totalScore + '</td>' +
-                '</tr>';
-        overallUserCount += userCount;
-        overallTotalScore += totalScore;
-      });
-      html += '<tr style="font-weight:bold;">' +
-              '<td>总计</td>' +
-              '<td>' + overallUserCount + '</td>' +
-              '<td>' + overallTotalScore + '</td>' +
-              '</tr>';
-      html += '</tbody></table>';
-      document.getElementById('statsContent').innerHTML = html;
-    }
+    // 默认显示 trading
+    document.getElementById('tradingSection').style.display = 'block';
   </script>
 </body>
 </html>
