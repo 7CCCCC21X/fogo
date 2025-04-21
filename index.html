@@ -2,100 +2,35 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>排行榜汇总</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background-color: #fafafa;
-    }
-    h1, h2 {
-      text-align: center;
-      color: #333;
-    }
-    .tab-nav {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .tab-nav button {
-      padding: 10px 20px;
-      margin: 0 5px;
-      border: none;
-      border-radius: 4px;
-      font-size: 14px;
-      background-color: #f5f5f5;
-      cursor: pointer;
-    }
-    .tab-nav button.active {
-      background-color: #0066cc;
-      color: white;
-    }
-    .leaderboard-section {
-      display: none;
-      margin-top: 20px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      overflow-x: auto;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-      font-size: 14px;
-    }
-    th {
-      background-color: #eee;
-    }
-    .search-box {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .search-box textarea {
-      width: 500px;
-      height: 200px;
-      padding: 8px;
-      font-size: 14px;
-      resize: both;
-    }
-    .search-box button {
-      padding: 8px 16px;
-      font-size: 14px;
-      margin-left: 5px;
-      cursor: pointer;
-    }
-    .no-data td {
-      color: #999;
-      font-style: italic;
-    }
-    .trend-row {
-      display: none;
-      background-color: #f9f9f9;
-      transition: all 0.3s ease;
-    }
-    .trend-cell {
-      padding: 16px;
-    }
-    #authorLink {
-      margin-top: 30px;
-      text-align: center;
-      font-size: 14px;
-    }
-    @media (max-width: 768px) {
-      table, thead, tbody, th, td, tr {
-        display: block;
-      }
-      th {
-        font-size: 12px;
-      }
-      td {
-        font-size: 12px;
-        padding: 6px;
-      }
+    body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:20px;background:#fafafa;}
+    h1,h2{text-align:center;color:#333;}
+    .tab-nav{text-align:center;margin-bottom:20px;}
+    .tab-nav button{padding:10px 20px;margin:0 5px;border:none;border-radius:4px;font-size:14px;background:#f5f5f5;cursor:pointer;transition:background .2s;}
+    .tab-nav button.active{background:#0066cc;color:#fff;}
+    .leaderboard-section{display:none;margin-top:20px;}
+    table{width:100%;border-collapse:collapse;margin-top:10px;}
+    th,td{border:1px solid #ccc;padding:8px;text-align:center;font-size:14px;}
+    th{background:#eee;}
+    .search-box{text-align:center;margin-bottom:20px;}
+    .search-box textarea{width:500px;height:200px;padding:8px;font-size:14px;resize:both;}
+    .search-box button{padding:8px 16px;font-size:14px;margin-left:5px;cursor:pointer;}
+    .no-data td{color:#999;font-style:italic;}
+    .trend-row{display:none;background:#f9f9f9;}
+    .trend-cell{padding:0;}
+    .trend-wrapper{max-height:0;overflow:hidden;opacity:0;transition:max-height .4s ease,opacity .4s ease;}
+    .trend-wrapper.expanded{max-height:220px;opacity:1;}
+    .diff-cell{cursor:pointer;font-weight:bold;}
+    .diff-cell.up{color:#0caa00;background:#e6ffe6;}
+    .diff-cell.down{color:#d60000;background:#ffe6e6;}
+    #authorLink{text-align:center;font-size:14px;margin-top:30px;}
+    @media(max-width:600px){
+      table{display:block;overflow-x:auto;white-space:nowrap;}
+      th,td{font-size:12px;padding:6px;}
+      .search-box textarea{width:100%;}
     }
   </style>
 </head>
@@ -106,11 +41,13 @@
     <button class="tab-btn" data-target="stakingSection">STAKING</button>
     <button class="tab-btn" data-target="discordSection">DISCORD</button>
     <button class="tab-btn" data-target="xcomSection">X.COM</button>
+    <button class="tab-btn" data-target="statsSection">汇总</button>
   </div>
 
-  <div class="search-box" id="searchBox">
+  <div class="search-box">
     <textarea id="queryInput" placeholder="每行输入一个地址进行查询..."></textarea>
     <button onclick="filterCurrentTable()">查询（支持批量地址）</button>
+    <button onclick="exportCSV()">导出 CSV</button>
   </div>
 
   <section id="tradingSection" class="leaderboard-section">
@@ -145,123 +82,155 @@
     </table>
   </section>
 
+  <section id="statsSection" class="leaderboard-section">
+    <h2>汇总数据</h2>
+    <p style="text-align:center;font-size:14px;color:#555;">用户数量 = 该排行榜参与地址数； 总分 = 该排行榜所有地址分数之和</p>
+    <div style="max-width:900px;margin:0 auto;">
+      <canvas id="statsChart" height="250"></canvas>
+    </div>
+  </section>
+
   <div id="authorLink">
     作者：<a href="https://x.com/0xXIAOc" target="_blank">小C</a>
   </div>
 
   <script>
-    const categories = ['trading', 'staking', 'discord', 'xcom'];
-    const lineRegex = /排名:\\s*(\\d+)\\s*,\\s*地址:\\s*([^,]+)\\s*,\\s*分数:\\s*(\\d+)/;
+    const categories=['trading','staking','discord','xcom'];
+    const lineRegex=/排名:\\s*(\\d+)\\s*,\\s*地址:\\s*([^,]+)\\s*,\\s*分数:\\s*(\\d+)/;
 
-    async function loadData(type, week = '') {
-      try {
-        const res = await fetch(`data/${type}${week ? '-' + week : ''}.txt`);
-        const text = await res.text();
-        const data = {};
-        text.trim().split('\\n').forEach(line => {
-          const match = line.match(lineRegex);
-          if (match) data[match[2].toLowerCase()] = parseFloat(match[3]);
+    async function loadData(type,week=''){
+      try{
+        const res=await fetch(`data/${type}${week?'-'+week:''}.txt`);
+        if(!res.ok) return {};
+        const text=await res.text();
+        const obj={};
+        text.trim().split('\\n').forEach(l=>{
+          const m=l.match(lineRegex);
+          if(m)obj[m[2].toLowerCase()]=+m[3];
         });
-        return data;
-      } catch {
-        return {};
-      }
+        return obj;
+      }catch{return{};}
     }
 
-    async function loadLeaderboard(type) {
-      const thisWeek = await loadData(type);
-      const lastWeek = await loadData(type, 'week1');
-      const tbody = document.querySelector(`#${type}Table tbody`);
-      tbody.innerHTML = '';
-      let rank = 1;
-      Object.entries(thisWeek).forEach(([addr, now]) => {
-        const prev = lastWeek[addr] || 0;
-        const diff = now - prev;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
+    async function loadLeaderboard(type){
+      const thisWeek=await loadData(type);
+      const lastWeek=await loadData(type,'week1');
+      const tbody=document.querySelector(`#${type}Table tbody`);
+      tbody.innerHTML='';
+      let rank=1;
+      for(const[addr,now]of Object.entries(thisWeek)){
+        const prev=lastWeek[addr]||0;
+        const diff=now-prev;
+        const diffStr=`${diff>=0?'▲ ':'▼ '}${diff>=0?'+':''}${diff.toLocaleString()}`;
+        const tr=document.createElement('tr');
+        tr.innerHTML=`
           <td>${rank++}</td>
           <td>${addr}</td>
           <td>${prev}</td>
           <td>${now}</td>
-          <td class="diff-cell" style="color:${diff >= 0 ? 'green' : 'red'};cursor:pointer">
-            ${diff >= 0 ? '▲' : '▼'} ${Math.abs(diff)}
-          </td>`;
+          <td class="diff-cell ${diff>=0?'up':'down'}">${diffStr}</td>`;
+        const trendRow=document.createElement('tr');
+        trendRow.className='trend-row';
+        const td=document.createElement('td');
+        td.colSpan=5;
+        td.className='trend-cell';
+        const wrap=document.createElement('div');
+        wrap.className='trend-wrapper';
+        const cid=`trend-${type}-${addr.slice(2,10)}`;
+        wrap.innerHTML=`<canvas id="${cid}" height="200"></canvas>`;
+        td.appendChild(wrap);
+        trendRow.appendChild(td);
+        tbody.appendChild(tr);tbody.appendChild(trendRow);
 
-        const trendRow = document.createElement('tr');
-        trendRow.className = 'trend-row';
-        const trendCell = document.createElement('td');
-        trendCell.colSpan = 5;
-        trendCell.className = 'trend-cell';
-        trendCell.innerHTML = `<canvas id="trend-${type}-${addr.slice(2, 10)}" height="150"></canvas>`;
-        trendRow.appendChild(trendCell);
-        tbody.appendChild(tr);
-        tbody.appendChild(trendRow);
-
-        tr.querySelector('.diff-cell').addEventListener('click', () => {
-          trendRow.style.display = trendRow.style.display === 'table-row' ? 'none' : 'table-row';
-          drawTrendChart(addr, type, `trend-${type}-${addr.slice(2, 10)}`);
-        });
-      });
+        tr.querySelector('.diff-cell').onclick=()=>{
+          const show=trendRow.style.display==='table-row';
+          trendRow.style.display=show?'none':'table-row';
+          requestAnimationFrame(()=>wrap.classList.toggle('expanded',!show));
+          if(!show) drawTrendChart(addr,type,cid);
+        };
+      }
     }
 
-    async function drawTrendChart(address, category, canvasId) {
-      const weeks = ['week5', 'week4', 'week3', 'week2', 'week1'];
-      const labels = ['W5', 'W4', 'W3', 'W2', 'W1', '本周'];
-      const data = [];
-      for (let w of weeks) {
-        const d = await loadData(category, w);
-        data.push(d[address.toLowerCase()] || 0);
+    async function drawTrendChart(addr,cat,cid){
+      const weeks=['week5','week4','week3','week2','week1'];
+      const labels=['W5','W4','W3','W2','W1','本周'];
+      const data=[];
+      for(const w of weeks){
+        const d=await loadData(cat,w);
+        data.push(d[addr.toLowerCase()]||0);
       }
-      const now = await loadData(category);
-      data.push(now[address.toLowerCase()] || 0);
-      const ctx = document.getElementById(canvasId)?.getContext('2d');
-      if (ctx) new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: '积分趋势',
-            data,
-            tension: 0.3,
-            pointRadius: 3,
-            borderColor: '#007bff',
-            borderWidth: 2,
-            fill: false
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true } }
+      const now=await loadData(cat);
+      data.push(now[addr.toLowerCase()]||0);
+      const ctx=document.getElementById(cid).getContext('2d');
+      new Chart(ctx,{type:'line',
+        data:{labels,datasets:[{label:'积分趋势',data,tension:.3,pointRadius:3,borderWidth:2,borderColor:'#007bff',fill:false}]},
+        options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+    }
+
+    function filterCurrentTable(){
+      const list=document.getElementById('queryInput').value.trim().toLowerCase().split('\\n').filter(Boolean);
+      const sec=[...document.querySelectorAll('.leaderboard-section')].find(s=>s.style.display!=='none');
+      if(!sec)return;
+      const rows=sec.querySelectorAll('tbody tr');
+      for(let i=0;i<rows.length;i+=2){
+        const main=rows[i],extra=rows[i+1];
+        const addr=main.children[1].innerText.toLowerCase();
+        const show=!list.length||list.includes(addr);
+        main.style.display=extra.style.display=show?'':'none';
+      }
+    }
+
+    function exportCSV(){
+      const sec=[...document.querySelectorAll('.leaderboard-section')].find(s=>s.style.display!=='none');
+      if(!sec)return;
+      const rows=sec.querySelectorAll('tbody tr');
+      let csv='Rank,Address,Prev,Now,Diff\\n';
+      for(let i=0;i<rows.length;i+=2){
+        const r=rows[i];if(r.style.display==='none')continue;
+        csv+=[...r.children].map(td=>td.innerText.replace(/,/g,'')).join(',')+'\\n';
+      }
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='leaderboard.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    async function loadStatsTrend(){
+      const weeks=['week5','week4','week3','week2','week1',''];
+      const labels=['W5','W4','W3','W2','W1','本周'];
+      const totUsers=[],totPoints=[];
+      for(const w of weeks){
+        let u=0,p=0;
+        for(const c of categories){
+          const d=await loadData(c,w||undefined);
+          u+=Object.keys(d).length;
+          p+=Object.values(d).reduce((a,b)=>a+b,0);
         }
-      });
-    }
-
-    function filterCurrentTable() {
-      const input = document.getElementById('queryInput').value.trim().toLowerCase().split('\\n').filter(Boolean);
-      const section = Array.from(document.querySelectorAll('.leaderboard-section')).find(s => s.style.display !== 'none');
-      const rows = section?.querySelectorAll('tbody tr');
-      if (!rows) return;
-      for (let i = 0; i < rows.length; i += 2) {
-        const main = rows[i], extra = rows[i + 1];
-        const addr = main.children[1].textContent.toLowerCase();
-        const show = input.length === 0 || input.includes(addr);
-        main.style.display = extra.style.display = show ? '' : 'none';
+        totUsers.push(u);totPoints.push(p);
       }
+      const ctx=document.getElementById('statsChart').getContext('2d');
+      new Chart(ctx,{type:'line',
+        data:{labels,datasets:[
+          {label:'总积分',data:totPoints,tension:.3,pointRadius:3,borderWidth:2,borderColor:'#007bff',fill:false},
+          {label:'总用户数',data:totUsers,tension:.3,pointRadius:3,borderWidth:2,borderColor:'#28a745',fill:false}
+        ]},
+        options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}});
     }
 
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.onclick = () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const id = btn.dataset.target;
-        document.querySelectorAll('.leaderboard-section').forEach(sec => sec.style.display = 'none');
-        document.getElementById(id).style.display = 'block';
-        if (categories.includes(id.replace('Section', ''))) loadLeaderboard(id.replace('Section', ''));
-      };
+    document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>{
+      document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      document.querySelectorAll('.leaderboard-section').forEach(s=>s.style.display='none');
+      const id=b.dataset.target;
+      const sec=document.getElementById(id);
+      sec.style.display='block';
+      if(categories.includes(id.replace('Section',''))) loadLeaderboard(id.replace('Section',''));
+      if(id==='statsSection') loadStatsTrend();
     });
 
-    document.getElementById('tradingSection').style.display = 'block';
+    document.getElementById('tradingSection').style.display='block';
     loadLeaderboard('trading');
   </script>
 </body>
