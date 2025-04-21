@@ -99,7 +99,7 @@ const boards={
   trading:['data/trading.txt','data/trading-week1.txt','tradingTable','trading'],
   staking:['data/staking.txt','data/staking-week1.txt','stakingTable','staking'],
   discord:['data/discord.txt','data/discord-week1.txt','discordTable','discord'],
-  xcom   :['data/xcom.txt','data/xcom.week1.txt','xcomTable','xcom']
+  xcom   :['data/xcom.txt','data/xcom-week1.txt','xcomTable','xcom']
 };
 const lineRe=/排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
 const nf=n=>Number(n).toLocaleString('en-US');
@@ -149,7 +149,7 @@ async function loadBoard(name){
   tbody.appendChild(frag);
   sorter(tableId,1);
   loaded[name]=true;
-}
+};
 
 /* 排序 */
 function sorter(tableId,skip=0){
@@ -168,7 +168,7 @@ function sorter(tableId,skip=0){
       document.querySelector(`#${tableId} tbody`).appendChild(frag);
     };
   });
-}
+};
 
 /* 汇总 */
 function buildStats(){
@@ -183,27 +183,21 @@ function buildStats(){
     const prev=trs.reduce((s,r)=>s+ +r.cells[3].textContent.replace(/,/g,''),0);
     const diff=cur-prev;const pct=prev?((diff/prev)*100).toFixed(2):0;
     const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td>${name.toUpperCase()}</td>
-      <td>${nf(users)}</td>
-      <td>${nf(cur)}</td>
-      <td>${nf(prev)}</td>
-      <td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${nf(diff)}</td>
-      <td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${diff>0?'+':''}${pct}%</td>
-      <td><canvas class="spark"></canvas></td>`;
+    tr.innerHTML=`<td>${name.toUpperCase()}</td><td>${nf(users)}</td><td>${nf(cur)}</td><td>${nf(prev)}</td>
+                  <td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${nf(diff)}</td>
+                  <td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${diff>0?'+':''}${pct}%</td><td><canvas class="spark"></canvas></td>`;
     sb.appendChild(tr);
     const c=tr.querySelector('canvas');
     new Chart(c,{type:'line',data:{labels:['上周','本周'],datasets:[{data:[prev,cur]}]},
       options:{plugins:{legend:{display:false}},elements:{line:{tension:.3,borderWidth:1},point:{radius:0}},
-      scales:{x:{display:false},y:{display:false}}}});
+               scales:{x:{display:false},y:{display:false}}}});
     totCur+=cur;totPrev+=prev;totUsers+=users;rows.push({name,cur,prev});
   }
   const d=totCur-totPrev;pctTot=totPrev?((d/totPrev)*100).toFixed(2):0;
   const trT=document.createElement('tr');trT.style.fontWeight='bold';
-  trT.innerHTML=`
-    <td>总计</td><td>${nf(totUsers)}</td><td>${nf(totCur)}</td><td>${nf(totPrev)}</td>
-    <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${nf(d)}</td>
-    <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${d>0?'+':''}${pctTot}%</td><td></td>`;
+  trT.innerHTML=`<td>总计</td><td>${nf(totUsers)}</td><td>${nf(totCur)}</td><td>${nf(totPrev)}</td>
+                <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${nf(d)}</td>
+                <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${d>0?'+':''}${pctTot}%</td><td></td>`;
   sb.appendChild(trT);
   sorter('statsTable');
   const ctx=document.getElementById('trendChart').getContext('2d');
@@ -212,7 +206,7 @@ function buildStats(){
     data:{labels:rows.map(r=>r.name.toUpperCase()),datasets:[{label:'本周',data:rows.map(r=>r.cur)},
       {label:'上周',data:rows.map(r=>r.prev)}]},
     options:{responsive:true,plugins:{legend:{display:true}},elements:{line:{tension:.3},point:{radius:3}}}});
-}
+};
 
 /* 搜索 / 导出 */
 queryBtn.onclick=()=>{
