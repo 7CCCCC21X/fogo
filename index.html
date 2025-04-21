@@ -110,6 +110,7 @@ const boards={
 const lineRe=/排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
 const nf=n=>Number(n).toLocaleString('en-US');
 const loaded={}; let trendChart=null;
+
 const loadingElement = document.getElementById('loading');
 const errorMessageElement = document.getElementById('error-message');
 
@@ -126,17 +127,20 @@ async function loadBoard(name){
     loadingElement.style.display = 'block';
     errorMessageElement.style.display = 'none';
 
-    if(loaded[name]) return;
+    if (loaded[name]) return;
+
     const [curP, preP, tableId, type] = boards[name];
     const [curRes, preRes] = await Promise.all([fetch(curP), fetch(preP)]);
-    if (!curRes.ok) throw new Error(`加载 ${name} 失败`);
-    
+
+    if (!curRes.ok) throw new Error(`${name}的当前数据加载失败`);
+
     const curTxt = await curRes.text();
     const preTxt = preRes.ok ? await preRes.text() : '';
-    
+
     renderBoard(tableId, type, curTxt, preTxt);
   } catch (error) {
     console.error(error);
+    errorMessageElement.textContent = `${error.message}，请稍后重试。`;
     errorMessageElement.style.display = 'block';
   } finally {
     loadingElement.style.display = 'none';
