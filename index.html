@@ -141,9 +141,9 @@ async function loadBoard(name){
     tr.insertCell().textContent=nf(cur);
     tr.insertCell().textContent=prev!==0 ? nf(prev) : '0'; // Display '0' if no previous score
     const tdDiff=tr.insertCell();
-    tdDiff.textContent=diff===null?'—':${diff>0?'▲':'▼'} ${nf(Math.abs(diff))};
+    tdDiff.textContent=diff===null?'—':`${diff>0?'▲':'▼'} ${nf(Math.abs(diff))}`;
     tdDiff.className=diff>0?'diff-pos':diff<0?'diff-neg':'';
-    tr.insertCell().textContent=pct!==null?${diff>0?'+':''}${pct}%:'—';
+    tr.insertCell().textContent=pct!==null?`${diff>0?'+':''}${pct}%`:'—';
     frag.appendChild(tr);
   });
   tbody.appendChild(frag);
@@ -153,19 +153,19 @@ async function loadBoard(name){
 
 /* 排序 */
 function sorter(tableId,skip=0){
-  const ths=[...document.querySelector(#${tableId} thead).rows[0].cells];
+  const ths=[...document.querySelector(`#${tableId} thead`).rows[0].cells];
   ths.forEach((th,i)=>{if(i<=skip)return;
     th.onclick=()=>{ 
       const dir=th.classList.contains('sort-asc')?'desc':'asc';
       ths.forEach(t=>t.classList.remove('sort-asc','sort-desc'));
       th.classList.add(dir==='asc'?'sort-asc':'sort-desc');
-      const rows=[...document.querySelector(#${tableId} tbody).rows];
+      const rows=[...document.querySelector(`#${tableId} tbody`).rows];
       rows.sort((a,b)=>{
         const va=+a.cells[i].textContent.replace(/[^0-9.-]/g,''),vb=+b.cells[i].textContent.replace(/[^0-9.-]/g,'');
         return dir==='asc'?va-vb:vb-va;
       });
       const frag=document.createDocumentFragment();rows.forEach(r=>frag.appendChild(r));
-      document.querySelector(#${tableId} tbody).appendChild(frag);
+      document.querySelector(`#${tableId} tbody`).appendChild(frag);
     };
   });
 }
@@ -177,20 +177,20 @@ function buildStats(){
   let totCur=0,totPrev=0,totUsers=0;const rows=[];
   for(const [name,[,,tid]] of Object.entries(boards)){
     if(!loaded[name])continue;
-    const trs=[...document.querySelector(#${tid} tbody).rows];if(!trs.length)continue;
+    const trs=[...document.querySelector(`#${tid} tbody`).rows];if(!trs.length)continue;
     const users=trs.length;
     const cur=trs.reduce((s,r)=>s+ +r.cells[2].textContent.replace(/,/g,''),0);
     const prev=trs.reduce((s,r)=>s+ +r.cells[3].textContent.replace(/,/g,''),0);
     const diff=cur-prev;const pct=prev?((diff/prev)*100).toFixed(2):0;
     const tr=document.createElement('tr');
-    tr.innerHTML=
+    tr.innerHTML=`
       <td>${name.toUpperCase()}</td>
       <td>${nf(users)}</td>
       <td>${nf(cur)}</td>
       <td>${nf(prev)}</td>
       <td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${nf(diff)}</td>
       <td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${diff>0?'+':''}${pct}%</td>
-      <td><canvas class="spark"></canvas></td>;
+      <td><canvas class="spark"></canvas></td>`;
     sb.appendChild(tr);
     const c=tr.querySelector('canvas');
     new Chart(c,{type:'line',data:{labels:['上周','本周'],datasets:[{data:[prev,cur]}]},
@@ -200,10 +200,10 @@ function buildStats(){
   }
   const d=totCur-totPrev;pctTot=totPrev?((d/totPrev)*100).toFixed(2):0;
   const trT=document.createElement('tr');trT.style.fontWeight='bold';
-  trT.innerHTML=
+  trT.innerHTML=`
     <td>总计</td><td>${nf(totUsers)}</td><td>${nf(totCur)}</td><td>${nf(totPrev)}</td>
     <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${nf(d)}</td>
-    <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${d>0?'+':''}${pctTot}%</td><td></td>;
+    <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${d>0?'+':''}${pctTot}%</td><td></td>`;
   sb.appendChild(trT);
   sorter('statsTable');
   const ctx=document.getElementById('trendChart').getContext('2d');
@@ -227,10 +227,10 @@ queryBtn.onclick=()=>{
 exportBtn.onclick=()=>{
   const sec=[...document.querySelectorAll('.section')].find(s=>s.style.display!=='none');
   const tbl=sec.querySelector('table');if(!tbl){alert('无表格');return;}
-  const csv=[...tbl.rows].map(r=>[...r.cells].map(c=>"${c.textContent.replace(/"/g,'""')}").join(',')).join('\n');
+  const csv=[...tbl.rows].map(r=>[...r.cells].map(c=>`"${c.textContent.replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download=${sec.id}.csv;a.click();URL.revokeObjectURL(a.href);
+  a.download=`${sec.id}.csv`;a.click();URL.revokeObjectURL(a.href);
 };
 
 /* Tab */
