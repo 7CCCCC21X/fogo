@@ -29,8 +29,6 @@ tr:hover{background:rgba(0,0,0,.04)}
 .diff-neg{color:var(--neg);font-weight:bold}
 .spark{width:60px;height:22px}
 #themeToggle{position:fixed;top:15px;right:15px;background:none;border:none;font-size:22px;cursor:pointer;color:var(--accent)}
-#loading{display:none;text-align:center;font-size:16px;color:#888;}
-#error-message{display:none;text-align:center;font-size:16px;color:red;}
 </style>
 </head>
 <body>
@@ -53,10 +51,6 @@ tr:hover{background:rgba(0,0,0,.04)}
     <button id="queryBtn">查询</button>
     <button id="exportBtn">导出 CSV</button>
   </div>
-
-  <!-- 加载提示 -->
-  <div id="loading">数据加载中...</div>
-  <div id="error-message">加载数据时出现问题，请稍后再试。</div>
 
   <!-- 四榜单 -->
   <div id="trading" class="section">
@@ -111,9 +105,6 @@ const lineRe=/排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
 const nf=n=>Number(n).toLocaleString('en-US');
 const loaded={}; let trendChart=null;
 
-const loadingElement = document.getElementById('loading');
-const errorMessageElement = document.getElementById('error-message');
-
 /* 主题 */
 themeToggle.onclick=()=>{
   const dark=document.documentElement.getAttribute('data-theme')==='dark';
@@ -123,28 +114,41 @@ themeToggle.onclick=()=>{
 
 /* 加载榜单 */
 async function loadBoard(name){
-  try {
-    loadingElement.style.display = 'block';
-    errorMessageElement.style.display = 'none';
-
-    if (loaded[name]) return;
-
-    const [curP, preP, tableId, type] = boards[name];
-    const [curRes, preRes] = await Promise.all([fetch(curP), fetch(preP)]);
-
-    if (!curRes.ok) throw new Error(`${name}的当前数据加载失败`);
-
-    const curTxt = await curRes.text();
-    const preTxt = preRes.ok ? await preRes.text() : '';
-
-    renderBoard(tableId, type, curTxt, preTxt);
-  } catch (error) {
-    console.error(error);
-    errorMessageElement.textContent = `${error.message}，请稍后重试。`;
-    errorMessageElement.style.display = 'block';
-  } finally {
-    loadingElement.style.display = 'none';
-  }
+  if(loaded[name]) return;
+  const [curP,preP,tableId,type]=boards[name];
+  const [curRes,preRes]=await Promise.all([fetch(curP),fetch(preP)]);
+  if(!curRes.ok) return;
+  const curTxt=await curRes.text();
+  const preTxt=preRes.ok?await preRes.text():'';
+  const preMap=new Map();
+  preTxt.trim().split('\n').forEach(l=>{const m=l.match(lineRe);if(m)preMap.set(m[2].toLowerCase(),+m[3])});
+  const tbody=document.getElementById(tableId).querySelector('tbody');
+  const frag=document.createDocumentFragment();
+  curTxt.trim().split('\n').forEach(l=>{
+    const m=l.match(lineRe);if(!m)return;
+    const [_,rank,addr,curS]=m;const cur=+curS;const prev=preMap.get(addr.toLowerCase())??0; // Default to 0 if no previous score
+    const diff=prev!==null?cur-prev:null;const pct=prev?((diff/prev)*100).toFixed(2):null;
+    const tr=document.createElement('tr');
+    tr.insertCell().textContent=rank;
+    const tdAddr=tr.insertCell();
+    if(type==='discord'){tdAddr.textContent=addr;}else{
+      const a=document.createElement('a');a.textContent=addr;a.target='_blank';
+      if(type==='trading')a.href='https://debank.com/profile/'+addr;
+      if(type==='staking')a.href='https://app.getnimbus.io/?tab=token&type=SOL&chain=ALL&address='+addr;
+      if(type==='xcom')   a.href='https://x.com/'+addr;
+      tdAddr.appendChild(a);
+    }
+    tr.insertCell().textContent=nf(cur);
+    tr.insertCell().textContent=prev!==0 ? nf(prev) : '0'; // Display '0' if no previous score
+    const tdDiff=tr.insertCell();
+    tdDiff.textContent=diff===null?'—':`${diff>0?'▲':'▼'} ${nf(Math.abs(diff))}`;
+    tdDiff.className=diff>0?'diff-pos':diff<0?'diff-neg':'';
+    tr.insertCell().textContent=pct!==null?`${diff>0?'+':''}${pct}%`:'—';
+    frag.appendChild(tr);
+  });
+  tbody.appendChild(frag);
+  sorter(tableId,1);
+  loaded[name]=true;
 }
 
 /* 排序 */
@@ -220,7 +224,7 @@ queryBtn.onclick=()=>{
   const ks=term.split('\n').map(s=>s.trim()).filter(Boolean);
   rows.forEach(r=>r.style.display=ks.some(k=>r.textContent.toLowerCase().includes(k))?'':'none');
 };
-exportBtn.onclick=()=>{ 
+exportBtn.onclick=()=>{
   const sec=[...document.querySelectorAll('.section')].find(s=>s.style.display!=='none');
   const tbl=sec.querySelector('table');if(!tbl){alert('无表格');return;}
   const csv=[...tbl.rows].map(r=>[...r.cells].map(c=>`"${c.textContent.replace(/"/g,'""')}"`).join(',')).join('\n');
