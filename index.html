@@ -216,13 +216,25 @@ function buildStats(){
 
 /* 搜索 / 导出 */
 queryBtn.onclick=()=>{
-  const term=queryInput.value.trim().toLowerCase();
-  const sec=[...document.querySelectorAll('.section')].find(s=>s.style.display!=='none'&&s.id!=='stats');
-  if(!sec)return;
-  const rows=[...sec.querySelectorAll('tbody tr')];
-  if(!term){rows.forEach(r=>r.style.display='');return;}
-  const ks=term.split('\n').map(s=>s.trim()).filter(Boolean);
-  rows.forEach(r=>r.style.display=ks.some(k=>r.textContent.toLowerCase().includes(k))?'':'none');
+  const term = queryInput.value.trim().toLowerCase();
+  const sec = [...document.querySelectorAll('.section')].find(s => s.style.display !== 'none' && s.id !== 'stats');
+  if (!sec) return;
+
+  const rows = [...sec.querySelectorAll('tbody tr')];
+  const ks = term.split('\n').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+  let index = 1;
+  rows.forEach(r => {
+    const addrCell = r.cells[1];
+    const addrText = addrCell?.textContent?.trim().toLowerCase();
+    if (ks.includes(addrText)) {
+      r.style.display = '';
+      // 给“排名”列（第0列）加编号
+      r.cells[0].textContent = index++;
+    } else {
+      r.style.display = 'none';
+    }
+  });
 };
 exportBtn.onclick=()=>{
   const sec=[...document.querySelectorAll('.section')].find(s=>s.style.display!=='none');
