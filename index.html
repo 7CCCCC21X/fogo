@@ -215,26 +215,49 @@ function buildStats(){
 }
 
 /* 搜索 / 导出 */
-queryBtn.onclick=()=>{
+queryBtn.onclick = () => {
   const term = queryInput.value.trim().toLowerCase();
   const sec = [...document.querySelectorAll('.section')].find(s => s.style.display !== 'none' && s.id !== 'stats');
   if (!sec) return;
 
   const rows = [...sec.querySelectorAll('tbody tr')];
-  const ks = term.split('\n').map(s => s.trim().toLowerCase()).filter(Boolean);
+  if (!term) {
+    rows.forEach(r => r.style.display = '');
+    return;
+  }
 
-  let index = 1;
-  rows.forEach(r => {
-    const addrCell = r.cells[1];
+  const ks = term.split('\n').map(s => s.trim().toLowerCase()).filter(Boolean);
+  let inputIndexMap = new Map();
+  ks.forEach((addr, idx) => inputIndexMap.set(addr, idx + 1));
+
+  rows.forEach(row => {
+    const addrCell = row.cells[1];
     const addrText = addrCell?.textContent?.trim().toLowerCase();
-    if (ks.includes(addrText)) {
-      r.style.display = '';
-      // 给“排名”列（第0列）加编号
-      r.cells[0].textContent = index++;
+    if (inputIndexMap.has(addrText)) {
+      row.style.display = '';
+      // 插入编号列（前面增加一个列用于显示输入顺序）
+      let customIndexCell = row.querySelector('.input-index');
+      if (!customIndexCell) {
+        customIndexCell = row.insertCell(0);
+        customIndexCell.className = 'input-index';
+      }
+      customIndexCell.textContent = inputIndexMap.get(addrText);
     } else {
-      r.style.display = 'none';
+      row.style.display = 'none';
+      // 如果之前有添加过编号列，移除它
+      const firstCell = row.querySelector('.input-index');
+      if (firstCell) firstCell.remove();
     }
   });
+
+  // 给表头添加“编号”列（如果没有）
+  const theadRow = sec.querySelector('thead tr');
+  if (!theadRow.querySelector('.input-index-th')) {
+    const th = document.createElement('th');
+    th.textContent = '编号';
+    th.className = 'input-index-th';
+    theadRow.insertBefore(th, theadRow.firstChild);
+  }
 };
 exportBtn.onclick=()=>{
   const sec=[...document.querySelectorAll('.section')].find(s=>s.style.display!=='none');
