@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="zh">
 <head>
   <meta charset="UTF-8">
   <title>Fogo排行榜汇总</title>
@@ -21,6 +23,7 @@
   .toolbar button{padding:8px 16px;border:none;border-radius:4px;font-size:14px;cursor:pointer;color:#fff}
   #queryBtn{background:var(--accent);margin-right:6px}
   #exportBtn{background:#4caf50}
+  #queryStats{margin-top:10px;font-size:14px;color:var(--text)}
   .table-wrap{overflow-x:auto}
   table{width:100%;min-width:600px;border-collapse:collapse;margin-bottom:25px;background:var(--card)}
   th,td{border:1px solid var(--border);padding:6px 8px;text-align:center;font-size:14px}
@@ -53,6 +56,7 @@
     <textarea id="queryInput" placeholder="每行输入一个地址…"></textarea><br>
     <button id="queryBtn">查询</button>
     <button id="exportBtn">导出 CSV</button>
+    <div id="queryStats"></div>
   </div>
 
   <!-- 四榜单 -->
@@ -106,185 +110,217 @@ const boards={
 };
 const lineRe=/排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
 const nf=n=>Number(n).toLocaleString('en-US');
-const loaded={}; let trendChart=null;
+let loaded={}; let trendChart=null;
 
-/* 主题 */
-themeToggle.onclick=()=>{
-  const dark=document.documentElement.getAttribute('data-theme')==='dark';
-  document.documentElement.setAttribute('data-theme',dark?'':'dark');
-  themeToggle.textContent=dark?'🌙':'☀️';
+/* 主题切换 */
+document.getElementById('themeToggle').onclick = ()=>{
+  const dark = document.documentElement.getAttribute('data-theme')==='dark';
+  document.documentElement.setAttribute('data-theme', dark?'':'' );
+  document.getElementById('themeToggle').textContent = dark?'🌙':'☀️';
 };
 
 /* 加载榜单 */
 async function loadBoard(name){
   if(loaded[name]) return;
-  const [curP,preP,tableId,type]=boards[name];
-  const [curRes,preRes]=await Promise.all([fetch(curP),fetch(preP)]);
+  const [curP, preP, tableId, type] = boards[name];
+  const [curRes, preRes] = await Promise.all([fetch(curP), fetch(preP)]);
   if(!curRes.ok) return;
-  const curTxt=await curRes.text();
-  const preTxt=preRes.ok?await preRes.text():'';
-  const preMap=new Map();
-  preTxt.trim().split('\n').forEach(l=>{const m=l.match(lineRe);if(m)preMap.set(m[2].toLowerCase(),+m[3])});
-  const tbody=document.getElementById(tableId).querySelector('tbody');
-  const frag=document.createDocumentFragment();
+  const curTxt = await curRes.text();
+  const preTxt = preRes.ok?await preRes.text():'';
+  const preMap = new Map();
+  preTxt.trim().split('\n').forEach(l=>{ const m = l.match(lineRe); if(m) preMap.set(m[2].toLowerCase(), +m[3]); });
+  const tbody = document.getElementById(tableId).querySelector('tbody');
+  const frag = document.createDocumentFragment();
   curTxt.trim().split('\n').forEach(l=>{
-    const m=l.match(lineRe);if(!m)return;
-    const [_,rank,addr,curS]=m;const cur=+curS;const prev=preMap.get(addr.toLowerCase())??0; // Default to 0 if no previous score
-    const diff=prev!==null?cur-prev:null;const pct=prev?((diff/prev)*100).toFixed(2):null;
-    const tr=document.createElement('tr');
-    tr.insertCell().textContent=rank;
-    const tdAddr=tr.insertCell();
-    if(type==='discord'){tdAddr.textContent=addr;}else{
-      const a=document.createElement('a');a.textContent=addr;a.target='_blank';
-      if(type==='trading')a.href='https://debank.com/profile/'+addr;
-      if(type==='staking')a.href='https://app.getnimbus.io/?tab=token&type=SOL&chain=ALL&address='+addr;
-      if(type==='xcom')   a.href='https://x.com/'+addr;
+    const m = l.match(lineRe); if(!m) return;
+    const [_, rank, addr, curS] = m;
+    const cur = +curS;
+    const prev = preMap.get(addr.toLowerCase())??0;
+    const diff = cur - prev;
+    const pct = prev?((diff/prev)*100).toFixed(2):null;
+    const tr = document.createElement('tr');
+    tr.insertCell().textContent = rank;
+    const tdAddr = tr.insertCell();
+    if(type === 'discord'){
+      tdAddr.textContent = addr;
+    } else {
+      const a = document.createElement('a');
+      a.textContent = addr;
+      a.target = '_blank';
+      if(type==='trading') a.href = 'https://debank.com/profile/'+addr;
+      if(type==='staking') a.href = 'https://app.getnimbus.io/?tab=token&type=SOL&chain=ALL&address='+addr;
+      if(type==='xcom')    a.href = 'https://x.com/'+addr;
       tdAddr.appendChild(a);
     }
-    tr.insertCell().textContent=nf(cur);
-    tr.insertCell().textContent=prev!==0 ? nf(prev) : '0'; // Display '0' if no previous score
-    const tdDiff=tr.insertCell();
-    tdDiff.textContent=diff===null?'—':`${diff>0?'▲':'▼'} ${nf(Math.abs(diff))}`;
-    tdDiff.className=diff>0?'diff-pos':diff<0?'diff-neg':'';
-    tr.insertCell().textContent=pct!==null?`${diff>0?'+':''}${pct}%`:'—';
+    tr.insertCell().textContent = nf(cur);
+    tr.insertCell().textContent = prev?nf(prev):'0';
+    const tdDiff = tr.insertCell();
+    tdDiff.textContent = diff>0?`▲ ${nf(diff)}`:`▼ ${nf(Math.abs(diff))}`;
+    tdDiff.className = diff>0?'diff-pos':diff<0?'diff-neg':'';
+    tr.insertCell().textContent = pct!==null?`${diff>0?'+':''}${pct}%`:'—';
     frag.appendChild(tr);
   });
   tbody.appendChild(frag);
-  sorter(tableId,1);
-  loaded[name]=true;
+  sorter(tableId);
+  loaded[name] = true;
 }
 
-/* 排序 */
-function sorter(tableId,skip=0){
-  const ths=[...document.querySelector(`#${tableId} thead`).rows[0].cells];
-  ths.forEach((th,i)=>{if(i<=skip)return;
-    th.onclick=()=>{ 
-      const dir=th.classList.contains('sort-asc')?'desc':'asc';
+/* 排序函数 */
+function sorter(tableId){
+  const table = document.getElementById(tableId);
+  const ths = [...table.querySelectorAll('thead th')];
+  ths.forEach((th, i)=>{
+    if(i<2) return;
+    th.onclick = ()=>{
+      const asc = !th.classList.contains('sort-asc');
       ths.forEach(t=>t.classList.remove('sort-asc','sort-desc'));
-      th.classList.add(dir==='asc'?'sort-asc':'sort-desc');
-      const rows=[...document.querySelector(`#${tableId} tbody`).rows];
+      th.classList.add(asc?'sort-asc':'sort-desc');
+      const rows = [...table.querySelectorAll('tbody tr')];
       rows.sort((a,b)=>{
-        const va=+a.cells[i].textContent.replace(/[^0-9.-]/g,''),vb=+b.cells[i].textContent.replace(/[^0-9.-]/g,'');
-        return dir==='asc'?va-vb:vb-va;
+        const va = +a.cells[i].textContent.replace(/[^0-9.-]/g,''),
+              vb = +b.cells[i].textContent.replace(/[^0-9.-]/g,''),
+              diff = asc? va-vb : vb-va;
+        return diff;
       });
-      const frag=document.createDocumentFragment();rows.forEach(r=>frag.appendChild(r));
-      document.querySelector(`#${tableId} tbody`).appendChild(frag);
+      rows.forEach(r=>table.querySelector('tbody').appendChild(r));
     };
   });
 }
 
-/* 汇总 */
-function buildStats(){
-  const sb=document.querySelector('#statsTable tbody');const sh=document.querySelector('#statsTable thead');
-  sh.innerHTML='<tr><th>排行榜</th><th>用户</th><th>本周</th><th>上周</th><th>变化</th><th>%</th><th>趋势</th></tr>';sb.innerHTML='';
-  let totCur=0,totPrev=0,totUsers=0;const rows=[];
-  for(const [name,[,,tid]] of Object.entries(boards)){
-    if(!loaded[name])continue;
-    const trs=[...document.querySelector(`#${tid} tbody`).rows];if(!trs.length)continue;
-    const users=trs.length;
-    const cur=trs.reduce((s,r)=>s+ +r.cells[2].textContent.replace(/,/g,''),0);
-    const prev=trs.reduce((s,r)=>s+ +r.cells[3].textContent.replace(/,/g,''),0);
-    const diff=cur-prev;const pct=prev?((diff/prev)*100).toFixed(2):0;
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td>${name.toUpperCase()}</td>
-      <td>${nf(users)}</td>
-      <td>${nf(cur)}</td>
-      <td>${nf(prev)}</td>
-      <td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${nf(diff)}</td>
-      <td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${diff>0?'+':''}${pct}%</td>
-      <td><canvas class="spark"></canvas></td>`;
-    sb.appendChild(tr);
-    const c=tr.querySelector('canvas');
-    new Chart(c,{type:'line',data:{labels:['上周','本周'],datasets:[{data:[prev,cur]}]},
-      options:{plugins:{legend:{display:false}},elements:{line:{tension:.3,borderWidth:1},point:{radius:0}},
-      scales:{x:{display:false},y:{display:false}}}});
-    totCur+=cur;totPrev+=prev;totUsers+=users;rows.push({name,cur,prev});
-  }
-  const d=totCur-totPrev;pctTot=totPrev?((d/totPrev)*100).toFixed(2):0;
-  const trT=document.createElement('tr');trT.style.fontWeight='bold';
-  trT.innerHTML=`
-    <td>总计</td><td>${nf(totUsers)}</td><td>${nf(totCur)}</td><td>${nf(totPrev)}</td>
-    <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${nf(d)}</td>
-    <td class="${d>0?'diff-pos':d<0?'diff-neg':''}">${d>0?'+':''}${pctTot}%</td><td></td>`;
-  sb.appendChild(trT);
-  sorter('statsTable');
-  const ctx=document.getElementById('trendChart').getContext('2d');
-  if(trendChart)trendChart.destroy();
-  trendChart=new Chart(ctx,{type:'line',
-    data:{labels:rows.map(r=>r.name.toUpperCase()),datasets:[{label:'本周',data:rows.map(r=>r.cur)},
-      {label:'上周',data:rows.map(r=>r.prev)}]},
-    options:{responsive:true,plugins:{legend:{display:true}},elements:{line:{tension:.3},point:{radius:3}}}});
-}
-
-/* 搜索 / 导出 */
-queryBtn.onclick = () => {
-  const term = queryInput.value.trim().toLowerCase();
-  const sec = [...document.querySelectorAll('.section')].find(s => s.style.display !== 'none' && s.id !== 'stats');
-  if (!sec) return;
-
+/* 查询和统计 */
+document.getElementById('queryBtn').onclick = ()=>{
+  const term = document.getElementById('queryInput').value.trim().toLowerCase();
+  const statsDiv = document.getElementById('queryStats');
+  const sec = [...document.querySelectorAll('.section')].find(s => s.style.display!=='none' && s.id!=='stats');
+  if(!sec) return;
   const rows = [...sec.querySelectorAll('tbody tr')];
-  if (!term) {
-    rows.forEach(r => r.style.display = '');
+  if(!term){
+    rows.forEach(r=>r.style.display='');
+    statsDiv.textContent = '';
     return;
   }
-
-  const ks = term.split('\n').map(s => s.trim().toLowerCase()).filter(Boolean);
-  let inputIndexMap = new Map();
-  ks.forEach((addr, idx) => inputIndexMap.set(addr, idx + 1));
-
-  rows.forEach(row => {
-    const addrCell = row.cells[1];
-    const addrText = addrCell?.textContent?.trim().toLowerCase();
-    if (inputIndexMap.has(addrText)) {
-      row.style.display = '';
-      // 插入编号列（前面增加一个列用于显示输入顺序）
-      let customIndexCell = row.querySelector('.input-index');
-      if (!customIndexCell) {
-        customIndexCell = row.insertCell(0);
-        customIndexCell.className = 'input-index';
+  const ks = term.split('\n').map(s=>s.trim()).filter(Boolean);
+  const mapIdx = new Map(ks.map((a,i)=>[a,i+1]));
+  rows.forEach(r=>{
+    const addr = r.cells[1].textContent.trim().toLowerCase();
+    if(mapIdx.has(addr)){
+      r.style.display='';
+      if(!r.querySelector('.input-index')){
+        const cell = r.insertCell(0);
+        cell.className='input-index';
+        cell.textContent = mapIdx.get(addr);
       }
-      customIndexCell.textContent = inputIndexMap.get(addrText);
     } else {
-      row.style.display = 'none';
-      // 如果之前有添加过编号列，移除它
-      const firstCell = row.querySelector('.input-index');
-      if (firstCell) firstCell.remove();
+      r.style.display='none';
+      const idxCell = r.querySelector('.input-index');
+      if(idxCell) idxCell.remove();
     }
   });
-
-  // 给表头添加“编号”列（如果没有）
-  const theadRow = sec.querySelector('thead tr');
-  if (!theadRow.querySelector('.input-index-th')) {
+  const head = sec.querySelector('thead tr');
+  if(!head.querySelector('.input-index-th')){
     const th = document.createElement('th');
-    th.textContent = '编号';
-    th.className = 'input-index-th';
-    theadRow.insertBefore(th, theadRow.firstChild);
+    th.className='input-index-th';
+    th.textContent='编号';
+    head.insertBefore(th, head.firstChild);
   }
-};
-exportBtn.onclick=()=>{
-  const sec=[...document.querySelectorAll('.section')].find(s=>s.style.display!=='none');
-  const tbl=sec.querySelector('table');if(!tbl){alert('无表格');return;}
-  const csv=[...tbl.rows].map(r=>[...r.cells].map(c=>`"${c.textContent.replace(/"/g,'""')}"`).join(',')).join('\n');
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download=`${sec.id}.csv`;a.click();URL.revokeObjectURL(a.href);
+  // 统计
+  const totalQueried = ks.length;
+  const visible = rows.filter(r=>r.style.display!=='none');
+  const hasPoints = visible.filter(r=>{
+    const idx = r.querySelector('.input-index')?3:2;
+    return parseInt(r.cells[idx].textContent.replace(/[^0-9]/g,''),10)>0;
+  }).length;
+  const totalPts = visible.reduce((s,r)=>{
+    const idx = r.querySelector('.input-index')?3:2;
+    return s + parseInt(r.cells[idx].textContent.replace(/[^0-9]/g,''),10);
+  },0);
+  statsDiv.textContent = `查询地址数量：${totalQueried}，有积分地址数量：${hasPoints}，总积分：${totalPts.toLocaleString()}`;
 };
 
-/* Tab */
+/* 导出 CSV */
+document.getElementById('exportBtn').onclick = ()=>{
+  const sec = [...document.querySelectorAll('.section')].find(s=>s.style.display!=='none');
+  const tbl = sec.querySelector('table');
+  if(!tbl){ alert('无表格'); return; }
+  const csv = [...tbl.rows].map(r=>[...r.cells].map(c=>`"${c.textContent.replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = `${sec.id}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+/* Tab 切换 */
 document.querySelectorAll('.tab-btn').forEach(btn=>{
-  btn.onclick=()=>{
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
-    const t=btn.dataset.target;
+  btn.onclick = ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const tgt = btn.dataset.target;
     document.querySelectorAll('.section').forEach(s=>s.style.display='none');
-    document.getElementById(t).style.display='block';
-    toolbar.style.display=t==='stats'?'none':'block';
-    if(t==='stats') buildStats();
+    document.getElementById(tgt).style.display = 'block';
+    document.getElementById('toolbar').style.display = tgt==='stats'?'none':'block';
+    if(tgt==='stats') buildStats();
   };
 });
 
-/* 首屏：并行加载四榜单，然后生成汇总 */
+/* 首屏加载 */
 Promise.all(Object.keys(boards).map(loadBoard)).then(buildStats);
+
+/* 构建汇总 */
+function buildStats(){
+  const thead = document.querySelector('#statsTable thead');
+  const tbody = document.querySelector('#statsTable tbody');
+  thead.innerHTML = '<tr><th>排行榜</th><th>用户</th><th>本周</th><th>上周</th><th>变化</th><th>%</th><th>趋势</th></tr>';
+  tbody.innerHTML = '';
+  let sumCur=0, sumPrev=0, sumUsers=0;
+  const data = [];
+  for(const key of Object.keys(boards)){
+    if(!loaded[key]) continue;
+    const table = document.getElementById(boards[key][2]);
+    const rows = [...table.querySelectorAll('tbody tr')];
+    if(!rows.length) continue;
+    const users = rows.length;
+    const cur = rows.reduce((s,r)=>s + parseInt(r.cells[2].textContent.replace(/,/g,''),10),0);
+    const prev= rows.reduce((s,r)=>s + parseInt(r.cells[3].textContent.replace(/,/g,''),10),0);
+    const diff = cur - prev;
+    const pct = prev?((diff/prev)*100).toFixed(2):'0.00';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${key.toUpperCase()}</td><td>${nf(users)}</td><td>${nf(cur)}</td><td>${nf(prev)}</td>`+
+                   `<td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${nf(diff)}</td>`+
+                   `<td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${diff>0?'+':''}${pct}%</td>`+
+                   `<td><canvas class="spark"></canvas></td>`;
+    tbody.appendChild(tr);
+    const ctx = tr.querySelector('canvas');
+    new Chart(ctx,{
+      type:'line',data:{labels:['上周','本周'],datasets:[{data:[prev,cur]}]},
+      options:{plugins:{legend:{display:false}},elements:{line:{tension:0.3},point:{radius:0}},
+               scales:{x:{display:false},y:{display:false}}}
+    });
+    sumCur += cur; sumPrev += prev; sumUsers += users;
+    data.push({key,cur,prev});
+  }
+  // 总计
+  const totalDiff = sumCur - sumPrev;
+  const totalPct = sumPrev?((totalDiff/sumPrev)*100).toFixed(2):'0.00';
+  const trTotal = document.createElement('tr');
+  trTotal.style.fontWeight='bold';
+  trTotal.innerHTML = `<td>总计</td><td>${nf(sumUsers)}</td><td>${nf(sumCur)}</td><td>${nf(sumPrev)}</td>`+
+                      `<td class="${totalDiff>0?'diff-pos':totalDiff<0?'diff-neg':''}">${nf(totalDiff)}</td>`+
+                      `<td class="${totalDiff>0?'diff-pos':totalDiff<0?'diff-neg':''}">${totalDiff>0?'+':''}${totalPct}%</td><td></td>`;
+  tbody.appendChild(trTotal);
+  sorter('statsTable');
+  // 趋势图
+  const ctxMain = document.getElementById('trendChart').getContext('2d');
+  if(trendChart) trendChart.destroy();
+  trendChart = new Chart(ctxMain,{
+    type:'line',
+    data:{labels:data.map(d=>d.key.toUpperCase()),datasets:[
+      {label:'本周',data:data.map(d=>d.cur)},
+      {label:'上周',data:data.map(d=>d.prev)}
+    ]},
+    options:{responsive:true,plugins:{legend:{display:true}},elements:{line:{tension:0.3},point:{radius:3}}}
+  });
+}
 </script>
 </body>
 </html>
