@@ -7,13 +7,13 @@
   <!-- ✅ 添加 favicon 图标 -->
   <link rel="icon" href="favicon.ico" type="image/x-icon">
 
-  <!-- 现有脚本和样式不变 -->
+  <!-- 引入 Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
   :root{--bg:#fafafa;--text:#333;--card:#fff;--border:#ccc;--accent:#0066cc;--pos:#28a745;--neg:#e55353;--th:#f5f5f5}
   [data-theme=dark]{--bg:#1e1e1e;--text:#d6d6d6;--card:#2b2b2b;--border:#555;--accent:#3399ff;--pos:#3bd26f;--neg:#ff7070;--th:#333}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);transition:.3s}
-  .container{max-width:1200px;margin:0 auto;padding:20px}
+  .container{max-width:1200px;margin:0 auto;padding:20px;overflow-x:auto}
   h1,h2{text-align:center;margin:.3em 0}
   .tab-nav{text-align:center;margin-bottom:15px;overflow-x:auto;white-space:nowrap}
   .tab-nav button{padding:8px 18px;margin:0 4px;border:none;border-radius:4px;background:var(--th);cursor:pointer;font-size:14px;transition:.3s}
@@ -25,7 +25,7 @@
   #exportBtn{background:#4caf50}
   #queryStats{margin-top:10px;font-size:14px;color:var(--text)}
   .table-wrap{overflow-x:auto}
-  table{width:100%;min-width:600px;border-collapse:collapse;margin-bottom:25px;background:var(--card)}
+  table{width:100%;min-width:800px;border-collapse:collapse;margin-bottom:25px;background:var(--card)}
   th,td{border:1px solid var(--border);padding:6px 8px;text-align:center;font-size:14px}
   th{background:var(--th);position:sticky;top:0;z-index:2;cursor:pointer}
   th.sort-asc::after{content:" ▲";font-size:11px}
@@ -110,39 +110,42 @@ const boards={
 };
 const lineRe=/排名:\s*(\d+)\s*,\s*地址:\s*([^,]+)\s*,\s*分数:\s*(\d+)/;
 const nf=n=>Number(n).toLocaleString('en-US');
-let loaded={}; let trendChart=null;
+let loaded={}, trendChart=null;
 
 /* 主题切换 */
 document.getElementById('themeToggle').onclick = ()=>{
   const dark = document.documentElement.getAttribute('data-theme')==='dark';
-  document.documentElement.setAttribute('data-theme', dark?'':'' );
+  document.documentElement.setAttribute('data-theme', dark?'':'dark');
   document.getElementById('themeToggle').textContent = dark?'🌙':'☀️';
 };
 
 /* 加载榜单 */
 async function loadBoard(name){
   if(loaded[name]) return;
-  const [curP, preP, tableId, type] = boards[name];
-  const [curRes, preRes] = await Promise.all([fetch(curP), fetch(preP)]);
+  const [curP,preP,tableId,type] = boards[name];
+  const [curRes,preRes] = await Promise.all([fetch(curP), fetch(preP)]);
   if(!curRes.ok) return;
   const curTxt = await curRes.text();
-  const preTxt = preRes.ok?await preRes.text():'';
+  const preTxt = preRes.ok? await preRes.text() : '';
   const preMap = new Map();
-  preTxt.trim().split('\n').forEach(l=>{ const m = l.match(lineRe); if(m) preMap.set(m[2].toLowerCase(), +m[3]); });
+  preTxt.trim().split('\n').forEach(l=>{
+    const m = l.match(lineRe);
+    if(m) preMap.set(m[2].toLowerCase(), +m[3]);
+  });
+
   const tbody = document.getElementById(tableId).querySelector('tbody');
   const frag = document.createDocumentFragment();
   curTxt.trim().split('\n').forEach(l=>{
-    const m = l.match(lineRe); if(!m) return;
-    const [_, rank, addr, curS] = m;
-    const cur = +curS;
-    const prev = preMap.get(addr.toLowerCase())??0;
-    const diff = cur - prev;
-    const pct = prev?((diff/prev)*100).toFixed(2):null;
+    const m = l.match(lineRe);
+    if(!m) return;
+    const [_,rank,addr,curS] = m;
+    const cur = +curS, prev = preMap.get(addr.toLowerCase())||0;
+    const diff = cur - prev, pct = prev?((diff/prev)*100).toFixed(2):null;
     const tr = document.createElement('tr');
     tr.insertCell().textContent = rank;
-    const tdAddr = tr.insertCell();
-    if(type === 'discord'){
-      tdAddr.textContent = addr;
+    const tdA = tr.insertCell();
+    if(type==='discord'){
+      tdA.textContent = addr;
     } else {
       const a = document.createElement('a');
       a.textContent = addr;
@@ -150,7 +153,7 @@ async function loadBoard(name){
       if(type==='trading') a.href = 'https://debank.com/profile/'+addr;
       if(type==='staking') a.href = 'https://app.getnimbus.io/?tab=token&type=SOL&chain=ALL&address='+addr;
       if(type==='xcom')    a.href = 'https://x.com/'+addr;
-      tdAddr.appendChild(a);
+      tdA.appendChild(a);
     }
     tr.insertCell().textContent = nf(cur);
     tr.insertCell().textContent = prev?nf(prev):'0';
@@ -169,7 +172,7 @@ async function loadBoard(name){
 function sorter(tableId){
   const table = document.getElementById(tableId);
   const ths = [...table.querySelectorAll('thead th')];
-  ths.forEach((th, i)=>{
+  ths.forEach((th,i)=>{
     if(i<2) return;
     th.onclick = ()=>{
       const asc = !th.classList.contains('sort-asc');
@@ -177,10 +180,8 @@ function sorter(tableId){
       th.classList.add(asc?'sort-asc':'sort-desc');
       const rows = [...table.querySelectorAll('tbody tr')];
       rows.sort((a,b)=>{
-        const va = +a.cells[i].textContent.replace(/[^0-9.-]/g,''),
-              vb = +b.cells[i].textContent.replace(/[^0-9.-]/g,''),
-              diff = asc? va-vb : vb-va;
-        return diff;
+        const va=+a.cells[i].textContent.replace(/[^0-9.-]/g,''), vb=+b.cells[i].textContent.replace(/[^0-9.-]/g,''), d=asc?va-vb:vb-va;
+        return d;
       });
       rows.forEach(r=>table.querySelector('tbody').appendChild(r));
     };
@@ -191,16 +192,28 @@ function sorter(tableId){
 document.getElementById('queryBtn').onclick = ()=>{
   const term = document.getElementById('queryInput').value.trim().toLowerCase();
   const statsDiv = document.getElementById('queryStats');
-  const sec = [...document.querySelectorAll('.section')].find(s => s.style.display!=='none' && s.id!=='stats');
+  const sec = [...document.querySelectorAll('.section')]
+                .find(s=>s.style.display!=='none'&&s.id!=='stats');
   if(!sec) return;
+
   const rows = [...sec.querySelectorAll('tbody tr')];
   if(!term){
-    rows.forEach(r=>r.style.display='');
+    // 恢复所有行 & 清理编号列 & 表头 & 统计
+    rows.forEach(r=>{
+      r.style.display='';
+      const idxCell = r.querySelector('.input-index');
+      if(idxCell) idxCell.remove();
+    });
     statsDiv.textContent = '';
+    const head = sec.querySelector('thead tr');
+    const thIdx = head.querySelector('.input-index-th');
+    if(thIdx) thIdx.remove();
     return;
   }
+
   const ks = term.split('\n').map(s=>s.trim()).filter(Boolean);
   const mapIdx = new Map(ks.map((a,i)=>[a,i+1]));
+
   rows.forEach(r=>{
     const addr = r.cells[1].textContent.trim().toLowerCase();
     if(mapIdx.has(addr)){
@@ -216,6 +229,8 @@ document.getElementById('queryBtn').onclick = ()=>{
       if(idxCell) idxCell.remove();
     }
   });
+
+  // 表头“编号”
   const head = sec.querySelector('thead tr');
   if(!head.querySelector('.input-index-th')){
     const th = document.createElement('th');
@@ -223,6 +238,7 @@ document.getElementById('queryBtn').onclick = ()=>{
     th.textContent='编号';
     head.insertBefore(th, head.firstChild);
   }
+
   // 统计
   const totalQueried = ks.length;
   const visible = rows.filter(r=>r.style.display!=='none');
@@ -234,15 +250,20 @@ document.getElementById('queryBtn').onclick = ()=>{
     const idx = r.querySelector('.input-index')?3:2;
     return s + parseInt(r.cells[idx].textContent.replace(/[^0-9]/g,''),10);
   },0);
-  statsDiv.textContent = `查询地址数量：${totalQueried}，有积分地址数量：${hasPoints}，总积分：${totalPts.toLocaleString()}`;
+
+  statsDiv.textContent = 
+    `查询地址数量：${totalQueried}，有积分地址数量：${hasPoints}，总积分：${totalPts.toLocaleString()}`;
 };
 
 /* 导出 CSV */
 document.getElementById('exportBtn').onclick = ()=>{
-  const sec = [...document.querySelectorAll('.section')].find(s=>s.style.display!=='none');
+  const sec = [...document.querySelectorAll('.section')]
+                .find(s=>s.style.display!=='none');
   const tbl = sec.querySelector('table');
   if(!tbl){ alert('无表格'); return; }
-  const csv = [...tbl.rows].map(r=>[...r.cells].map(c=>`"${c.textContent.replace(/"/g,'""')}"`).join(',')).join('\n');
+  const csv = [...tbl.rows].map(r=>[...r.cells]
+               .map(c=>`"${c.textContent.replace(/"/g,'""')}"`).join(','))
+               .join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download = `${sec.id}.csv`;
@@ -253,72 +274,101 @@ document.getElementById('exportBtn').onclick = ()=>{
 /* Tab 切换 */
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.onclick = ()=>{
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-btn')
+            .forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     const tgt = btn.dataset.target;
-    document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+    document.querySelectorAll('.section')
+            .forEach(s=>s.style.display='none');
     document.getElementById(tgt).style.display = 'block';
-    document.getElementById('toolbar').style.display = tgt==='stats'?'none':'block';
+    document.getElementById('toolbar')
+            .style.display = tgt==='stats'?'none':'block';
     if(tgt==='stats') buildStats();
   };
 });
 
 /* 首屏加载 */
-Promise.all(Object.keys(boards).map(loadBoard)).then(buildStats);
+Promise.all(Object.keys(boards).map(loadBoard))
+       .then(buildStats);
 
 /* 构建汇总 */
 function buildStats(){
   const thead = document.querySelector('#statsTable thead');
   const tbody = document.querySelector('#statsTable tbody');
-  thead.innerHTML = '<tr><th>排行榜</th><th>用户</th><th>本周</th><th>上周</th><th>变化</th><th>%</th><th>趋势</th></tr>';
+  thead.innerHTML = '<tr>'
+    +'<th>排行榜</th><th>用户</th>'
+    +'<th>本周</th><th>上周</th>'
+    +'<th>变化</th><th>%</th><th>趋势</th>'
+    +'</tr>';
   tbody.innerHTML = '';
   let sumCur=0, sumPrev=0, sumUsers=0;
-  const data = [];
+  const data=[];
   for(const key of Object.keys(boards)){
     if(!loaded[key]) continue;
     const table = document.getElementById(boards[key][2]);
     const rows = [...table.querySelectorAll('tbody tr')];
     if(!rows.length) continue;
     const users = rows.length;
-    const cur = rows.reduce((s,r)=>s + parseInt(r.cells[2].textContent.replace(/,/g,''),10),0);
-    const prev= rows.reduce((s,r)=>s + parseInt(r.cells[3].textContent.replace(/,/g,''),10),0);
-    const diff = cur - prev;
-    const pct = prev?((diff/prev)*100).toFixed(2):'0.00';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${key.toUpperCase()}</td><td>${nf(users)}</td><td>${nf(cur)}</td><td>${nf(prev)}</td>`+
-                   `<td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${nf(diff)}</td>`+
-                   `<td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${diff>0?'+':''}${pct}%</td>`+
-                   `<td><canvas class="spark"></canvas></td>`;
+    const cur   = rows.reduce((s,r)=>
+                    s+parseInt(r.cells[2].textContent.replace(/,/g,''),10),0);
+    const prev  = rows.reduce((s,r)=>
+                    s+parseInt(r.cells[3].textContent.replace(/,/g,''),10),0);
+    const diff  = cur - prev;
+    const pct   = prev?((diff/prev)*100).toFixed(2):'0.00';
+    const tr    = document.createElement('tr');
+    tr.innerHTML = `<td>${key.toUpperCase()}</td>`
+      +`<td>${nf(users)}</td><td>${nf(cur)}</td>`
+      +`<td>${nf(prev)}</td>`
+      +`<td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${nf(diff)}</td>`
+      +`<td class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">${diff>0?'+':''}${pct}%</td>`
+      +`<td><canvas class="spark" width="60" height="22"></canvas></td>`;
     tbody.appendChild(tr);
-    const ctx = tr.querySelector('canvas');
-    new Chart(ctx,{
-      type:'line',data:{labels:['上周','本周'],datasets:[{data:[prev,cur]}]},
-      options:{plugins:{legend:{display:false}},elements:{line:{tension:0.3},point:{radius:0}},
-               scales:{x:{display:false},y:{display:false}}}
+    // 小折线，禁用响应式
+    const ctx = tr.querySelector('canvas').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: { labels:['上周','本周'], datasets:[{ data:[prev,cur] }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        elements: { line:{ tension:0.3 }, point:{ radius:0 } },
+        scales:{ x:{ display:false }, y:{ display:false } }
+      }
     });
     sumCur += cur; sumPrev += prev; sumUsers += users;
-    data.push({key,cur,prev});
+    data.push({ key, cur, prev });
   }
-  // 总计
+  // 总计一行
   const totalDiff = sumCur - sumPrev;
-  const totalPct = sumPrev?((totalDiff/sumPrev)*100).toFixed(2):'0.00';
+  const totalPct  = sumPrev?((totalDiff/sumPrev)*100).toFixed(2):'0.00';
   const trTotal = document.createElement('tr');
-  trTotal.style.fontWeight='bold';
-  trTotal.innerHTML = `<td>总计</td><td>${nf(sumUsers)}</td><td>${nf(sumCur)}</td><td>${nf(sumPrev)}</td>`+
-                      `<td class="${totalDiff>0?'diff-pos':totalDiff<0?'diff-neg':''}">${nf(totalDiff)}</td>`+
-                      `<td class="${totalDiff>0?'diff-pos':totalDiff<0?'diff-neg':''}">${totalDiff>0?'+':''}${totalPct}%</td><td></td>`;
+  trTotal.style.fontWeight = 'bold';
+  trTotal.innerHTML = `<td>总计</td>`
+    +`<td>${nf(sumUsers)}</td><td>${nf(sumCur)}</td>`
+    +`<td>${nf(sumPrev)}</td>`
+    +`<td class="${totalDiff>0?'diff-pos':totalDiff<0?'diff-neg':''}">${nf(totalDiff)}</td>`
+    +`<td class="${totalDiff>0?'diff-pos':totalDiff<0?'diff-neg':''}">` 
+      +`${totalDiff>0?'+':''}${totalPct}%</td><td></td>`;
   tbody.appendChild(trTotal);
   sorter('statsTable');
-  // 趋势图
+  // 大折线
   const ctxMain = document.getElementById('trendChart').getContext('2d');
   if(trendChart) trendChart.destroy();
-  trendChart = new Chart(ctxMain,{
-    type:'line',
-    data:{labels:data.map(d=>d.key.toUpperCase()),datasets:[
-      {label:'本周',data:data.map(d=>d.cur)},
-      {label:'上周',data:data.map(d=>d.prev)}
-    ]},
-    options:{responsive:true,plugins:{legend:{display:true}},elements:{line:{tension:0.3},point:{radius:3}}}
+  trendChart = new Chart(ctxMain, {
+    type: 'line',
+    data: {
+      labels: data.map(d=>d.key.toUpperCase()),
+      datasets:[
+        { label:'本周', data:data.map(d=>d.cur) },
+        { label:'上周', data:data.map(d=>d.prev) }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend:{ display:true } },
+      elements:{ line:{ tension:0.3 }, point:{ radius:3 } }
+    }
   });
 }
 </script>
